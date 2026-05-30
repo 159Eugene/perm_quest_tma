@@ -1,0 +1,148 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block tail_js %}
+{{ super() }}
+<script>
+// Русификация интерфейса SQLAdmin
+document.addEventListener('DOMContentLoaded', function() {
+    // Замена английских текстов на русские
+    const translations = {
+        'Create': 'Создать',
+        'Save': 'Сохранить',
+        'Save and continue editing': 'Сохранить и продолжить',
+        'Save and add another': 'Сохранить и добавить ещё',
+        'Delete': 'Удалить',
+        'Are you sure?': 'Вы уверены?',
+        'Cancel': 'Отмена',
+        'Edit': 'Редактировать',
+        'Details': 'Подробнее',
+        'List': 'Список',
+        'Search': 'Поиск',
+        'Export': 'Экспорт',
+        'Go': 'Применить',
+        'items': 'записей',
+        'Showing': 'Показано',
+        'of': 'из',
+        'to': 'до',
+        'Previous': 'Назад',
+        'Next': 'Далее',
+        'First': 'Первая',
+        'Last': 'Последняя',
+        'No items found.': 'Записи не найдены.',
+        'Home': 'Главная',
+        'Sign Out': 'Выйти',
+        'Log In': 'Войти',
+        'Username': 'Логин',
+        'Password': 'Пароль',
+        'Remember me': 'Запомнить',
+        'Actions': 'Действия',
+        'With selected': 'С выбранными',
+        'Yes, delete': 'Да, удалить',
+        'Back to list': 'Назад к списку',
+        'Add': 'Добавить',
+        'New': 'Новый',
+    };
+
+    function translatePage() {
+        // Кнопки
+        document.querySelectorAll('a, button, input[type="submit"], .btn, label, th, option, h1, h2, h3, h4, span, p, li').forEach(el => {
+            for (const [eng, rus] of Object.entries(translations)) {
+                if (el.textContent.trim() === eng) {
+                    el.textContent = rus;
+                }
+                if (el.value && el.value.trim() === eng) {
+                    el.value = rus;
+                }
+                if (el.placeholder && el.placeholder.trim() === eng) {
+                    el.placeholder = rus;
+                }
+            }
+        });
+        
+        // Placeholder поиска
+        document.querySelectorAll('input[placeholder="Search"]').forEach(el => {
+            el.placeholder = 'Поиск...';
+        });
+    }
+
+    translatePage();
+    
+    // Повторяем через 500мс для динамически загруженных элементов
+    setTimeout(translatePage, 500);
+    setTimeout(translatePage, 1500);
+
+    // === КАРТА LEAFLET ДЛЯ КООРДИНАТ ===
+    // Находим поля latitude/longitude на странице создания/редактирования
+    const latInput = document.querySelector('input[name="latitude"]');
+    const lonInput = document.querySelector('input[name="longitude"]');
+    
+    if (latInput && lonInput) {
+        // Подключаем Leaflet CSS и JS
+        const leafletCSS = document.createElement('link');
+        leafletCSS.rel = 'stylesheet';
+        leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(leafletCSS);
+        
+        const leafletJS = document.createElement('script');
+        leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        leafletJS.onload = function() {
+            // Создаём контейнер карты
+            const mapDiv = document.createElement('div');
+            mapDiv.id = 'coord-map';
+            mapDiv.style.cssText = 'width:100%;height:350px;border-radius:8px;margin:10px 0 20px 0;border:2px solid #dee2e6;';
+            
+            // Вставляем карту после поля longitude
+            const lonGroup = lonInput.closest('.mb-3') || lonInput.parentElement;
+            lonGroup.after(mapDiv);
+            
+            // Добавляем подсказку
+            const hint = document.createElement('small');
+            hint.className = 'text-muted';
+            hint.innerHTML = '📍 <b>Кликните по карте</b> чтобы выбрать координаты. Или введите вручную в поля выше.';
+            mapDiv.before(hint);
+            
+            // Инициализируем карту
+            const defaultLat = parseFloat(latInput.value) || 58.0097;
+            const defaultLon = parseFloat(lonInput.value) || 56.2444;
+            
+            const map = L.map('coord-map').setView([defaultLat, defaultLon], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+            
+            let marker = L.marker([defaultLat, defaultLon], {draggable: true}).addTo(map);
+            
+            // Клик по карте — перемещаем маркер и заполняем поля
+            map.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                latInput.value = e.latlng.lat.toFixed(6);
+                lonInput.value = e.latlng.lng.toFixed(6);
+            });
+            
+            // Перетаскивание маркера
+            marker.on('dragend', function(e) {
+                const pos = marker.getLatLng();
+                latInput.value = pos.lat.toFixed(6);
+                lonInput.value = pos.lng.toFixed(6);
+            });
+            
+            // Обновление маркера при ручном вводе координат
+            function updateMarkerFromInputs() {
+                const lat = parseFloat(latInput.value);
+                const lon = parseFloat(lonInput.value);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    marker.setLatLng([lat, lon]);
+                    map.setView([lat, lon], map.getZoom());
+                }
+            }
+            
+            latInput.addEventListener('change', updateMarkerFromInputs);
+            lonInput.addEventListener('change', updateMarkerFromInputs);
+            latInput.addEventListener('blur', updateMarkerFromInputs);
+            lonInput.addEventListener('blur', updateMarkerFromInputs);
+        };
+        document.head.appendChild(leafletJS);
+    }
+});
+</script>
+{% endblock %}
