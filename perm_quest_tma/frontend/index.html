@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Perm Quest Platform — TMA</title>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        slideUp: 'slideUp 0.3s ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)', opacity: 0 },
+                            '100%': { transform: 'translateY(0)', opacity: 1 },
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <style>
+        :root {
+            --tg-theme-bg-color: #0f172a;
+            --tg-theme-text-color: #f8fafc;
+            --tg-theme-secondary-bg-color: #1e293b;
+            --tg-theme-button-color: #6366f1;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-hint-color: #94a3b8;
+        }
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        .slider-container { position: relative; overflow: hidden; user-select: none; }
+        .slider-before { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .slider-handle { position: absolute; top: 0; bottom: 0; width: 4px; background-color: #6366f1; cursor: ew-resize; z-index: 10; }
+        .slider-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; background-color: #6366f1; border: 3px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        
+        .leaflet-container { background: #0f172a; outline: 0; font-family: inherit; }
+        .custom-map-marker { display: flex; align-items: center; justify-content: center; background: transparent; border: none; }
+        .user-marker { display: flex; align-items: center; justify-content: center; }
+        .leaflet-control-attribution { display: none !important; }
+
+        /* ==================================================================== */
+        /* --- АВТО-ИНВЕРСИЯ ПОД СВЕТЛУЮ ТЕМУ TELEGRAM (ПОЛНЫЙ РЕДИЗАЙН v2.0) --- */
+        /* ==================================================================== */
+        
+        body.tg-light {
+            background-color: #f8fafc !important; /* Благородный светло-серо-синий фон */
+            color: #0f172a !important;
+        }
+
+        /* 1. УБИВАЕМ «БУТЕРБРОД» (Светлая прозрачная шапка и нижний бар) */
+        body.tg-light header,
+        body.tg-light nav {
+            background-color: rgba(255, 255, 255, 0.90) !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.tg-light header h1,
+        body.tg-light header .text-white {
+            color: #0f172a !important;
+        }
+        body.tg-light nav button {
+            color: #64748b !important;
+        }
+        body.tg-light nav button.text-indigo-400 {
+            color: #4f46e5 !important; /* Сочный индиго для активной иконки */
+            transform: scale(1.15) !important;
+        }
+
+        /* 2. ЧИСТЫЕ БЕЛОСНЕЖНЫЕ КАРТОЧКИ (Вместо тёмных гробов в магазине и сумке) */
+        body.tg-light .bg-slate-950,
+        body.tg-light .bg-slate-900,
+        body.tg-light .bg-slate-800,
+        body.tg-light [class*="bg-slate-900"],
+        body.tg-light [class*="bg-slate-950"] {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        /* 3. КОНТРАСТНАЯ ТИПОГРАФИКА ВНУТРИ КАРТОЧЕК */
+        body.tg-light .text-white,
+        body.tg-light .text-slate-200,
+        body.tg-light .text-slate-300,
+        body.tg-light .text-slate-400 {
+            color: #334155 !important;
+        }
+        body.tg-light h2.text-white,
+        body.tg-light h3.text-white,
+        body.tg-light h4.text-white,
+        body.tg-light .font-bold.text-white {
+            color: #0f172a !important;
+            font-weight: 900 !important;
+        }
+
+        /* 4. ПОЛЯ ВВОДА (ИНПУТЫ) И СЕЛЕКТЫ */
+        body.tg-light input[type="text"],
+        body.tg-light select {
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+            font-weight: 700 !important;
+        }
+        body.tg-light input[type="text"]::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        /* 5. ПОЛИРОВКА КНОПОК ПОД СВЕТЛЫЙ UX */
+        
+        /* Главные кнопки (Оставляем сочную заливку и БЕЛЫЙ текст) */
+        body.tg-light button.bg-indigo-600,
+        body.tg-light button.bg-emerald-600,
+        body.tg-light button.bg-amber-600,
+        body.tg-light button.bg-blue-600 {
+            color: #ffffff !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Грязно-коричневые кнопки «Подойдите ближе» -> превращаем в аккуратный disabled */
+        body.tg-light button[class*="bg-indigo-900"],
+        body.tg-light button[class*="bg-emerald-900"],
+        body.tg-light button[class*="bg-amber-900"] {
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            color: #64748b !important;
+            font-weight: 700 !important;
+            box-shadow: none !important;
+        }
+
+        /* Кнопки вариантов ответа в диалогах с NPC */
+        body.tg-light button.bg-slate-950 {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        body.tg-light button.bg-slate-950:hover {
+            background-color: #f1f5f9 !important;
+        }
+
+        /* Второстепенные кнопки («Сбросить», «Отказаться») */
+        body.tg-light button.bg-slate-800 {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+            border-color: #cbd5e1 !important;
+        }
+
+        /* Кнопка «Прервать квест» (В самом низу квеста) */
+        body.tg-light button[class*="bg-rose-950"] {
+            background-color: #fff1f2 !important;
+            border-color: #fecdd3 !important;
+            color: #e11d48 !important;
+            font-weight: 800 !important;
+        }
+
+        /* Кнопка «Отмена» в модалке выбора класса */
+        body.tg-light button[class*="bg-rose-600\/20"] {
+            background-color: #f1f5f9 !important;
+            color: #64748b !important;
+        }
+
+        /* 6. ПИЛЛСЫ И ПЛАШКИ (Рюкзак квеста, Баланс в шапке, Подсказки) */
+        body.tg-light [class*="bg-indigo-950"],
+        body.tg-light [class*="bg-amber-600\/20"],
+        body.tg-light [class*="bg-indigo-600\/20"] {
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            box-shadow: none !important;
+        }
+        
+        /* Читаемые тёмные акценты вместо выцветших пастельных */
+        body.tg-light .text-amber-400,
+        body.tg-light button[class*="text-amber-400"],
+        body.tg-light header .text-amber-300 {
+            color: #d97706 !important; /* Тёмный янтарь */
+        }
+        body.tg-light .text-emerald-400,
+        body.tg-light header .text-emerald-300 {
+            color: #059669 !important; /* Тёмный изумруд */
+        }
+        body.tg-light .text-blue-400 {
+            color: #2563eb !important;
+        }
+        body.tg-light button[class*="text-indigo-400"] {
+            color: #4338ca !important;
+        }
+        
+        /* Раскрытые бесплатные подсказки */
+        body.tg-light .bg-indigo-950\/50.text-indigo-200 {
+            background-color: #e0e7ff !important;
+            color: #312e81 !important;
+            border-color: #c7d2fe !important;
+        }
+        /* ========================================== */
+        /* ТИЗЕР КООПЕРАТИВА (ТЕМНАЯ И СВЕТЛАЯ ТЕМЫ)  */
+        /* ========================================== */
+        .coop-teaser-banner {
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.7), rgba(59, 7, 100, 0.7));
+            border: 1px solid rgba(168, 85, 247, 0.35);
+        }
+        .coop-teaser-banner .coop-title { color: #f3e8ff; }
+        .coop-teaser-banner .coop-desc { color: #cbd5e1; }
+
+        body.tg-light .coop-teaser-banner {
+            background: linear-gradient(135deg, rgba(238, 242, 255, 0.95), rgba(250, 232, 255, 0.95)) !important;
+            border: 1px solid #c7d2fe !important;
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08) !important;
+        }
+        body.tg-light .coop-teaser-banner .coop-title { color: #312e81 !important; }
+        body.tg-light .coop-teaser-banner .coop-desc { color: #64748b !important; }
+    </style>
+</head>
+<body class="p-0 m-0">
+
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+    <script type="text/plain" id="app-source">
+        const { useState, useEffect, useRef } = React;
+        const tg = window.Telegram?.WebApp;
+
+        function App() {
+            const [mapTileUrl, setMapTileUrl] = useState(() => {
+                return tg?.colorScheme === 'light' 
+                    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+            });
+            useEffect(() => {
+                // Глобальный перехватчик 503 ошибки (Технические работы)
+                const originalFetch = window.fetch;
+                window.fetch = async function(...args) {
+                    const response = await originalFetch.apply(this, args);
+                    if (response.status === 503) {
+                        triggerNotification("⏸ Экспедиция приостановлена: Гейм-мастер проводит технические работы на сервере.", "error");
+                    }
+                    return response;
+                };
+
+                const syncTelegramTheme = () => {
+                    const isLight = tg?.colorScheme === 'light';
+                    document.body.classList.toggle('tg-light', isLight);
+                    
+                    const newTile = isLight 
+                        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                        
+                    setMapTileUrl(newTile);
+                    
+                    // Мгновенная подмена тайлов «на лету» без перезагрузки Leaflet
+                    if (mapInstance.current) {
+                        mapInstance.current.eachLayer(layer => {
+                            if (layer instanceof L.TileLayer) layer.setUrl(newTile);
+                        });
+                    }
+                };
+
+                syncTelegramTheme();
+                tg?.onEvent('themeChanged', syncTelegramTheme);
+                return () => tg?.offEvent('themeChanged', syncTelegramTheme);
+            }, []);
+            
+            const [activeRandomEvent, setActiveRandomEvent] = useState(null);
+            const [achievementsAlerts, setAchievementsAlerts] = useState([]);
+            const [activeTab, setActiveTab] = useState("quest");
+            const [profile, setProfile] = useState(null);
+            const [dailyRiddleAnswer, setDailyRiddleAnswer] = useState("");
+            const [tgAvatar, setTgAvatar] = useState(() => tg?.initDataUnsafe?.user?.photo_url || null);
+
+            // --- КАТАЛОГ ПРЕДМЕТОВ ДЛЯ ПЕРЕВОДА SLUG В НАЗВАНИЯ ---
+            const [itemsCatalog, setItemsCatalog] = useState({});
+            const [inspectedItem, setInspectedItem] = useState(null); // Модалка описания предмета
+            
+            // --- НОВЫЕ СТЕЙТЫ ДЛЯ ПРОФИЛЕЙ И АЧИВОК ---
+            const [inspectedPlayer, setInspectedPlayer] = useState(null); // Модалка чужого профиля
+            const [achFilter, setAchFilter] = useState("all"); // Фильтр: "all" | "bronze" | "silver" | "diamond"
+            const [inspectedAch, setInspectedAch] = useState(null); // Попап кликабельного достижения
+            
+            // --- ДОБАВЛЕНО: Стейт окна одышки и турбо-заказа кофе (Спринт 3) ---
+            const [exhaustedModal, setExhaustedModal] = useState(null);
+
+            const instantExpressCoffee = async () => {
+                const coffeeItem = shop.find(i => i.item_name === "Пермский Эспрессо" || i.name.includes("Экспресс"));
+                if (!coffeeItem) { triggerNotification("Эспрессо временно распродан в глобальном каталоге", "error"); return; }
+                setLoading(true);
+                try {
+                    const buyRes = await fetch(`/api/shop/buy/${coffeeItem.id}`, { method: "POST", headers: getHeaders() });
+                    if (buyRes.ok) {
+                        await fetch(`/api/inventory/use/Пермский Эспрессо`, { method: "POST", headers: getHeaders() });
+                        tg?.HapticFeedback?.notificationOccurred('success');
+                        triggerNotification("☕️ Экспресс-доставка! Бодрость восстановлена (+45 ⚡️)", "success");
+                        setExhaustedModal(null);
+                        await loadData(true);
+                    } else {
+                        const err = await buyRes.json().catch(() => ({}));
+                        triggerNotification(err.detail || "Недостаточно монет для экспресс-заказа!", "error");
+                    }
+                } catch(e) { triggerNotification("Ошибка сети", "error"); }
+                setLoading(false);
+            };
+            // ---------------------------------------------------------------
+
+            // --- ДОБАВЛЕНО: Тумблер симуляции смертного для QA-тестеров ---
+            const [mortalMode, setMortalMode] = useState(false);
+
+            const toggleMortalModeQA = async () => {
+                try {
+                    const res = await fetch("/api/admin/tester/mortal-mode", { method: "POST", headers: getHeaders() });
+                    if (res.ok) {
+                        const d = await res.json();
+                        setMortalMode(d.mortal_mode);
+                        tg?.HapticFeedback?.notificationOccurred('warning');
+                        triggerNotification(d.message, "info");
+                    }
+                } catch(e) { triggerNotification("Ошибка переключения QA-мода", "error"); }
+            };
+            // ------------------------------------------------------------
+
+            const inspectItemBySlug = (slug) => {
+                const cleanSlug = (slug || "").replace(/^(📦|🎟|🧙‍♂️)\s*/, "").split(" (")[0].trim();
+                const meta = itemsCatalog[cleanSlug] || itemsCatalog[slug];
+                if (meta) {
+                    setInspectedItem({ ...meta, slug: cleanSlug });
+                } else {
+                    setInspectedItem({ 
+                        name: cleanSlug, 
+                        description: "Подробное описание этого артефакта пока скрыто в архивах Пермской губернии.", 
+                        weight: 0, 
+                        type: "ARTIFACT",
+                        slug: cleanSlug 
+                    });
+                }
+            };
+
+            // --- НОВЫЕ ФУНКЦИИ ДЛЯ ПРОФИЛЯ ---
+            const openPlayerModal = async (id) => {
+                setLoading(true);
+                try {
+                    const res = await fetch(`/api/player/${id}`, { headers: getHeaders() });
+                    if (res.ok) setInspectedPlayer(await res.json());
+                    else triggerNotification("Не удалось загрузить профиль юзера", "error");
+                } catch(e) { triggerNotification("Ошибка связи", "error"); }
+                setLoading(false);
+            };
+
+            
+            const toggleAnonymity = async () => {
+                try {
+                    const res = await fetch("/api/profile/anonymity", { method: "POST", headers: getHeaders() });
+                    if (res.ok) {
+                        const d = await res.json();
+                        setProfile(prev => ({ ...prev, is_anonymous: d.is_anonymous }));
+                        triggerNotification(d.is_anonymous ? "👻 Профиль скрыт (Анонимный режим)" : "👁 Профиль снова открыт всем", "info");
+                    }
+                } catch(e) { triggerNotification("Ошибка транзакции", "error"); }
+            };
+
+            // --- ЗАПИСЬ ИГРОКА В ЛИСТ ОЖИДАНИЯ КООПЕРАТИВА ---
+            const notifyCoopRelease = async () => {
+                try {
+                    const res = await fetch("/api/profile/notify-coop", { method: "POST", headers: getHeaders() });
+                    if (res.ok) {
+                        triggerNotification("🎉 Заявка принята! Вы получите пуш-уведомление в бот первыми в день релиза.", "success");
+                    }
+                } catch(e) { triggerNotification("Ошибка сети", "error"); }
+            };
+            
+            const [mapPoints, setMapPoints] = useState([]);
+            const [selectedPoint, setSelectedPoint] = useState(null);
+            const [mapReady, setMapReady] = useState(false);
+            
+            const [activeQuest, setActiveQuest] = useState(null);
+            const [activeStandaloneNpc, setActiveStandaloneNpc] = useState(null);
+            
+            // --- СОСТОЯНИЯ ИНВЕНТАРЯ И КРАФТА ---
+            const [inventory, setInventory] = useState({ items: [], current_weight: 0 });
+            const [invTab, setInvTab] = useState("items"); // "items" | "craft"
+            const [recipes, setRecipes] = useState([]);
+            
+            const [shop, setShop] = useState([]);
+            const [leaderboard, setLeaderboard] = useState([]);
+            const [leaderboardPeriod, setLeaderboardPeriod] = useState("global");
+            const [loading, setLoading] = useState(true);
+            
+            const [cities, setCities] = useState([]);
+            const [selectedMarketId, setSelectedMarketId] = useState(null);
+            const [compassHeading, setCompassHeading] = useState(0);
+            const [bearing, setBearing] = useState(0);
+            
+            const [notifications, setNotifications] = useState([]);
+            // --- СИСТЕМА УДЕРЖИВАЕМОГО ТОСТА (13 секунд по ТЗ) ---
+            const activeOperationRef = useRef(null);
+            const [persistentToast, setPersistentToast] = useState(null);
+
+            // Лёгкая синхронизация кошелька без перегрузки мобильной сети
+            const syncProfile = async () => {
+                try {
+                    const res = await fetch("/api/profile", { headers: getHeaders() });
+                    if (res.ok) setProfile(await res.json());
+                } catch(e) {}
+            };
+
+            const startPersistentToast = (text) => {
+                if (loading || persistentToast) return null; // ЗАЩИТА ОТ ДВОЙНОГО КЛИКА
+                const opId = Date.now();
+                activeOperationRef.current = opId;
+                setPersistentToast({ id: opId, text });
+                setLoading(true);
+
+                // Авто-снятие ровно через 13 секунд по ТЗ
+                setTimeout(() => {
+                    if (activeOperationRef.current === opId) {
+                        setPersistentToast(null);
+                        setLoading(false);
+                        activeOperationRef.current = null;
+                    }
+                }, 13000);
+
+                return opId;
+            };
+
+            const stopPersistentToast = () => { // Снимаем бронестекло всегда, без привязки к opId
+                setPersistentToast(null);
+                setLoading(false);
+                activeOperationRef.current = null;
+            };
+            const [unlockedHints, setUnlockedHints] = useState({});
+            const [timeElapsed, setTimeElapsed] = useState(0);
+            const [showClassModal, setShowClassModal] = useState(false);
+
+            const COIN_SYMBOL = "💎";
+            const COIN_LABEL = "монет";
+
+            const [sliderValue, setSliderValue] = useState(50);
+            const sliderRef = useRef(null);
+            const isDragging = useRef(false);
+
+            const [mockGps, setMockGps] = useState(false);
+            const [coords, setCoords] = useState({ latitude: 58.0097, longitude: 56.2444 });
+            const [currentDistance, setCurrentDistance] = useState(null);
+            const lastPingTime = useRef(0);
+
+            const mapContainerRef = useRef(null);
+            const mapInstance = useRef(null);
+            const userMarkerRef = useRef(null);
+            const userCircleRef = useRef(null);
+            const markersLayerRef = useRef(null);
+
+            const getHeaders = () => {
+                const initData = tg?.initData || "user=%7B%22id%22%3A5748413499%2C%22first_name%22%3A%22%D0%94%D0%BC%D0%B8%D1%82%D1%80%D0%B8%D0%B9%22%2C%22username%22%3A%22dm_perm%22%7D&hash=mockhash";
+                return {
+                    "Content-Type": "application/json",
+                    "X-Tg-Init-Data": initData
+                };
+            };
+
+            const triggerNotification = (text, type = "success") => {
+                const id = Date.now() + Math.random();
+                setNotifications(prev => [...prev, { id, text, type }]);
+                setTimeout(() => {
+                    setNotifications(prev => prev.filter(n => n.id !== id));
+                }, 7000);
+            };
+
+            const pingLocation = async (lat, lng) => {
+                try {
+                    const res = await fetch("/api/quest/ping-location", {
+                        method: "POST", headers: getHeaders(), body: JSON.stringify({ latitude: lat, longitude: lng })
+                    });
+                    const d = await res.json();
+                    if (d.status === "speed_warning" || d.status === "banned") {
+                        triggerNotification(d.message, "error");
+                        if (d.status === "banned") loadData();
+                    }
+                } catch (e) {
+                    console.warn("Ping location failed");
+                }
+            };
+            useEffect(() => {
+                if (tg) {
+                    tg.ready();
+                    tg.expand();
+                }
+                loadData();
+            }, [activeTab, leaderboardPeriod, selectedMarketId]);
+
+            // Фоновый тихий радар присутствия (Heartbeat на витрине магазина)
+            useEffect(() => {
+                let presenceInterval;
+                if (activeTab === "shop" && selectedMarketId) {
+                    const sendHeartbeat = () => {
+                        fetch("/api/presence/heartbeat", {
+                            method: "POST",
+                            headers: getHeaders(),
+                            body: JSON.stringify({ market_id: selectedMarketId })
+                        }).catch(() => {});
+                    };
+                    sendHeartbeat(); // Первый импульс сразу при входе
+                    presenceInterval = setInterval(sendHeartbeat, 60000); // Повтор каждые 60 секунд
+                }
+                return () => clearInterval(presenceInterval);
+            }, [activeTab, selectedMarketId]);
+
+            useEffect(() => {
+                let iv;
+                if (activeQuest && activeQuest.time_passed_seconds !== undefined && activeQuest.gps_verified) {
+                    setTimeElapsed(activeQuest.time_passed_seconds);
+                    iv = setInterval(() => { setTimeElapsed(prev => prev + 1); }, 1000);
+                }
+                return () => clearInterval(iv);
+            }, [activeQuest]);
+
+            useEffect(() => {
+                lucide.createIcons();
+            });
+
+            useEffect(() => {
+                if (activeTab === "quest" && !activeQuest && mapContainerRef.current && !mapInstance.current) {
+                    mapInstance.current = L.map(mapContainerRef.current, { 
+                        zoomControl: false, 
+                        attributionControl: false 
+                    }).setView([coords.latitude, coords.longitude], 15);
+
+                    // --- ПЕРЕХВАТЧИК ДВОЙНОГО ТАПА С ПРОТЯЖКОЙ И ДЕТЕКТОРОМ КЛИКА ---
+                    let lastTap = 0;
+                    let isDragZooming = false;
+                    let startY = 0;
+                    let maxDeltaY = 0;
+                    let startZoom = 15;
+
+                    const mapDom = mapContainerRef.current;
+                    mapDom.addEventListener('touchstart', (e) => {
+                        if (e.touches.length === 1) {
+                            const now = Date.now();
+                            if (now - lastTap < 300) {
+                                isDragZooming = true;
+                                startY = e.touches[0].clientY;
+                                maxDeltaY = 0;
+                                startZoom = mapInstance.current.getZoom();
+                                mapInstance.current.dragging.disable();
+                                e.preventDefault();
+                            }
+                            lastTap = now;
+                        }
+                    }, { passive: false });
+
+                    // Инвертированный зум: тянем вниз = Zoom IN (+), толкаем вверх = Zoom OUT (-)
+                    mapDom.addEventListener('touchmove', (e) => {
+                        if (isDragZooming && e.touches.length === 1) {
+                            const deltaY = e.touches[0].clientY - startY;
+                            if (Math.abs(deltaY) > Math.abs(maxDeltaY)) maxDeltaY = deltaY;
+                            const zoomDiff = deltaY / 80; 
+                            const targetZoom = Math.min(19, Math.max(3, startZoom + zoomDiff));
+                            mapInstance.current.setZoom(targetZoom, { animate: false });
+                            e.preventDefault();
+                        }
+                    }, { passive: false });
+
+                    mapDom.addEventListener('touchend', () => {
+                        if (isDragZooming) {
+                            // Если при дабл-тапе палец почти не сдвинулся (< 10px) — это классический двойной клик!
+                            if (Math.abs(maxDeltaY) < 10) {
+                                mapInstance.current.setZoom(Math.min(19, startZoom + 1));
+                            }
+                            isDragZooming = false;
+                            mapInstance.current.dragging.enable();
+                        }
+                    });
+
+                    L.tileLayer(mapTileUrl, {
+                        maxZoom: 19,
+                        subdomains: 'abcd'
+                    }).addTo(mapInstance.current);
+
+                    markersLayerRef.current = L.layerGroup().addTo(mapInstance.current);
+                    setMapReady(true);
+                }
+
+                return () => {
+                    if (mapInstance.current && (activeTab !== "quest" || activeQuest)) {
+                        mapInstance.current.remove();
+                        mapInstance.current = null;
+                        userMarkerRef.current = null;
+                        userCircleRef.current = null;
+                        markersLayerRef.current = null;
+                        setMapReady(false);
+                    }
+                };
+            }, [activeTab, activeQuest]);
+
+            useEffect(() => {
+                if (!mapReady || !mapInstance.current || !markersLayerRef.current) return;
+                
+                markersLayerRef.current.clearLayers();
+
+                mapPoints.forEach(pt => {
+                    let iconHtml = '';
+                    if (pt.type === 'quest') iconHtml = '<div class="text-[28px] drop-shadow-[0_0_8px_rgba(251,191,36,0.8)] filter">🚩</div>';
+                    if (pt.type === 'market') iconHtml = '<div class="text-[28px] drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] filter">🏪</div>';
+                    if (pt.type === 'ar_marker') iconHtml = '<div class="text-[28px] drop-shadow-[0_0_8px_rgba(167,139,250,0.8)] filter">🔮</div>';
+                    if (pt.type === 'npc') iconHtml = '<div class="text-[28px] drop-shadow-[0_0_8px_rgba(59,130,246,0.9)] filter">🗣</div>';
+
+                    const icon = L.divIcon({
+                        html: iconHtml,
+                        className: 'custom-map-marker',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+
+                    const marker = L.marker([pt.lat, pt.lng], { icon }).addTo(markersLayerRef.current);
+                    marker.on('click', () => {
+                        setSelectedPoint(pt);
+                        mapInstance.current.setView([pt.lat, pt.lng], mapInstance.current.getZoom(), { animate: true, duration: 0.3 });
+                    });
+                });
+            }, [mapPoints, activeTab, activeQuest, mapReady]);
+
+            useEffect(() => {
+                if (!mapInstance.current || !coords) return;
+                
+                if (!userMarkerRef.current) {
+                    const userIcon = L.divIcon({
+                        html: '<div class="w-5 h-5 bg-indigo-500 rounded-full border-2 border-white shadow-[0_0_20px_rgba(99,102,241,1)]"></div>',
+                        className: 'user-marker',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    userMarkerRef.current = L.marker([coords.latitude, coords.longitude], { icon: userIcon, zIndexOffset: 1000 }).addTo(mapInstance.current);
+                    userCircleRef.current = L.circle([coords.latitude, coords.longitude], { 
+                        radius: 30, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.15, weight: 1 
+                    }).addTo(mapInstance.current);
+                } else {
+                    userMarkerRef.current.setLatLng([coords.latitude, coords.longitude]);
+                    userCircleRef.current.setLatLng([coords.latitude, coords.longitude]);
+                }
+            }, [coords, activeTab, activeQuest]);
+
+            useEffect(() => {
+                const handleOrientation = (event) => {
+                    let heading = null;
+                    if (event.webkitCompassHeading) {
+                        heading = event.webkitCompassHeading;
+                    } else if (event.alpha !== null) {
+                        heading = 360 - event.alpha;
+                    }
+                    if (heading !== null) {
+                        setCompassHeading(heading);
+                    }
+                };
+
+                window.addEventListener("deviceorientationabsolute", handleOrientation);
+                window.addEventListener("deviceorientation", handleOrientation);
+                
+                return () => {
+                    window.removeEventListener("deviceorientationabsolute", handleOrientation);
+                    window.removeEventListener("deviceorientation", handleOrientation);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (activeQuest?.step && coords) {
+                    const lat1 = coords.latitude * Math.PI / 180;
+                    const lon1 = coords.longitude * Math.PI / 180;
+                    const lat2 = activeQuest.step.latitude * Math.PI / 180;
+                    const lon2 = activeQuest.step.longitude * Math.PI / 180;
+
+                    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+                    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+                    let brng = Math.atan2(y, x) * 180 / Math.PI;
+                    brng = (brng + 360) % 360;
+                    
+                    setBearing(brng);
+                }
+            }, [coords, activeQuest]);
+
+            const loadData = async (isSilent = false) => {
+                if (!isSilent) setLoading(true);
+                try {
+                    const headers = getHeaders();
+                    
+                    const profRes = await fetch("/api/profile", { headers });
+                    if (profRes.ok) setProfile(await profRes.json());
+
+                    const catRes = await fetch("/api/items/catalog", { headers });
+                    if (catRes.ok) setItemsCatalog(await catRes.json());
+
+                    const citiesRes = await fetch("/api/admin/cities", { headers });
+                    if(citiesRes.ok) setCities(await citiesRes.json());
+
+                    const activeRes = await fetch("/api/quest/active", { headers });
+                    let activeData = { active: false };
+                    if (activeRes.ok) {
+                        activeData = await activeRes.json();
+                        setActiveQuest(activeData.active ? activeData : null);
+                    } else {
+                        setActiveQuest(null);
+                    }
+
+                    if (activeTab === "quest" && !activeData.active) {
+                        const mapPointsRes = await fetch("/api/map/points", { headers });
+                        if (mapPointsRes.ok) {
+                            const pointsData = await mapPointsRes.json();
+                            setMapPoints(Array.isArray(pointsData) ? pointsData : []);
+                        } else {
+                            setMapPoints([]);
+                        }
+                    } else if (activeData.active) {
+                        setMapPoints([]);
+                    }
+
+                    if (activeTab === "inventory") {
+                        const invRes = await fetch("/api/inventory", { headers });
+                        if (invRes.ok) setInventory(await invRes.json());
+                        
+                        const recRes = await fetch("/api/craft/recipes", { headers });
+                        if (recRes.ok) {
+                            const recData = await recRes.json();
+                            setRecipes(Array.isArray(recData) ? recData : []);
+                        }
+                    }
+
+                    if (activeTab === "shop") {
+                        const shopUrl = selectedMarketId ? `/api/shop?market_id=${selectedMarketId}` : "/api/shop";
+                        const shopRes = await fetch(shopUrl, { headers });
+                        if (shopRes.ok) {
+                            const shopData = await shopRes.json();
+                            setShop(Array.isArray(shopData) ? shopData : []);
+                        }
+                    }
+
+                    if (activeTab === "rating") {
+                        const rateRes = await fetch(`/api/leaderboard?period=${leaderboardPeriod}`, { headers });
+                        if (rateRes.ok) {
+                            const rateData = await rateRes.json();
+                            setLeaderboard(Array.isArray(rateData) ? rateData : []);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("Ошибка загрузки данных API:", error);
+                    triggerNotification("Ошибка подключения к серверу!", "error");
+                }
+                if (!isSilent) setLoading(false);
+            };
+            
+            const updateLocationSettings = async (cityId, autoDetect) => {
+                try {
+                    const res = await fetch("/api/profile/city", { 
+                        method: "POST", 
+                        headers: getHeaders(), 
+                        body: JSON.stringify({ city_id: cityId, auto_detect: autoDetect }) 
+                    });
+                    if (res.ok) {
+                        triggerNotification("Настройки локации обновлены!", "success");
+                        loadData();
+                    }
+                } catch(e) { triggerNotification("Ошибка изменения настроек", "error"); }
+            };
+
+            const requestCompassPermission = () => {
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                triggerNotification("Компас успешно откалиброван!", "success");
+                            } else {
+                                triggerNotification("Доступ к компасу запрещен", "error");
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    triggerNotification("Калибровка не требуется на вашем устройстве", "info");
+                }
+            };
+
+            const handleTouchMove = (e) => {
+                if (!sliderRef.current) return;
+                const rect = sliderRef.current.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const offset = clientX - rect.left;
+                let percentage = (offset / rect.width) * 100;
+                if (percentage < 0) percentage = 0;
+                if (percentage > 100) percentage = 100;
+                setSliderValue(percentage);
+            };
+
+            const handleMouseDown = () => { isDragging.current = true; };
+            const handleMouseUp = () => { isDragging.current = false; };
+            const handleMouseMove = (e) => {
+                if (isDragging.current) { handleTouchMove(e); }
+            };
+
+            useEffect(() => {
+                if (mockGps) return;
+                const watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const userCoords = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        setCoords(userCoords);
+
+                        const now = Date.now();
+                        if (now - lastPingTime.current > 20000) {
+                            pingLocation(userCoords.latitude, userCoords.longitude);
+                            lastPingTime.current = now;
+                        }
+
+                        if (activeQuest?.step) {
+                            const dist = calculateHaversine(userCoords.latitude, userCoords.longitude, activeQuest.step.latitude, activeQuest.step.longitude);
+                            setCurrentDistance(parseInt(dist));
+                        }
+                    },
+                    (error) => { triggerNotification("Не удалось получить реальный GPS сигнал!", "error"); },
+                    { enableHighAccuracy: true, maximumAge: 1000 }
+                );
+                return () => navigator.geolocation.clearWatch(watchId);
+            }, [mockGps, activeQuest]);
+            const calculateHaversine = (lat1, lon1, lat2, lon2) => {
+                const R = 6371000;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            };
+
+            const startQuest = async (id) => {
+                tg?.HapticFeedback?.impactOccurred('heavy');
+                const opId = startPersistentToast("⏳ Подготовка локации экспедиции...");
+                if (!opId) return;
+                setSelectedPoint(null);
+                try {
+                    const res = await fetch(`/api/quest/start/${id}`, { method: "POST", headers: getHeaders() });
+                    if (res.status === 429) { stopPersistentToast(); triggerNotification("Локация готовится...", "warning"); return; }
+                    stopPersistentToast();
+                    if (res.ok) {
+                        const d = await res.json().catch(() => ({}));
+                        if (d.status === "no_stamina") {
+                            tg?.HapticFeedback?.notificationOccurred('warning');
+                            setExhaustedModal(d);
+                            return;
+                        }
+                        triggerNotification("Квест успешно запущен!");
+                        setUnlockedHints({});
+                        await loadData(true);
+                    } else {
+                        const d = await res.json().catch(() => ({}));
+                        triggerNotification(d.detail || "Ошибка запуска", "error");
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка связи.", "error"); }
+            };
+
+            const exitQuest = async () => {
+                const message = "🛑 Вы уверены, что хотите прервать квест?\n\nВЕСЬ прогресс и накопленные (условно) в этом квесте ресурсы сгорят безвозвратно!";
+                const processExit = async (confirmed) => {
+                    if (!confirmed) return;
+                    tg?.HapticFeedback?.notificationOccurred('warning'); // ИСПРАВЛЕНО: Вызов системного типа вибрации вместо ошибочного удара
+                    const opId = startPersistentToast("⏳ Прерывание экспедиции...");
+                    if (!opId) return;
+                    try {
+                        const res = await fetch("/api/quest/exit", { method: "POST", headers: getHeaders() });
+                        if (res.status === 429) { stopPersistentToast(); return; }
+                        stopPersistentToast();
+                        if (res.ok) {
+                            const d = await res.json().catch(() => ({}));
+                            triggerNotification(d.message || "Квест прерван", "error");
+                            setActiveQuest(null);
+                            await syncProfile();
+                        } else {
+                            const d = await res.json().catch(() => ({}));
+                            triggerNotification(d.detail || "Произошла ошибка при выходе.", "error");
+                        }
+                    } catch (e) { stopPersistentToast(); triggerNotification("Ошибка сети.", "error"); }
+                };
+
+                if (tg && tg.showConfirm) {
+                    tg.showConfirm(message, processExit);
+                } else {
+                    processExit(window.confirm(message));
+                }
+            };
+
+            const changeClass = async (cls) => {
+                try {
+                    const res = await fetch("/api/profile/change-class", {
+                        method: "POST", headers: getHeaders(), body: JSON.stringify({ rpg_class: cls })
+                    });
+                    if (res.ok) {
+                        triggerNotification("Класс успешно изменен!", "success");
+                        setShowClassModal(false);
+                        loadData();
+                    } else {
+                        const err = await res.json();
+                        triggerNotification(err.detail, "error");
+                    }
+                } catch (e) { triggerNotification("Ошибка сервера", "error"); }
+            };
+
+            const claimIncome = async () => {
+                try {
+                    const res = await fetch("/api/profile/claim-income", { method: "POST", headers: getHeaders() });
+                    const d = await res.json();
+                    if (d.status === "success") {
+                        triggerNotification(`Прибыль собрана: +${d.collected_coins} ${COIN_LABEL}`);
+                        loadData();
+                    }
+                } catch (e) { triggerNotification("Ошибка транзакции.", "error"); }
+            };
+            const solveDailyRiddle = async () => {
+                if (!dailyRiddleAnswer.trim() || !profile?.daily_riddle) return;
+                tg?.HapticFeedback?.impactOccurred('medium');
+                const opId = startPersistentToast("⏳ Проверка ответа у пермских мудрецов...");
+                if (!opId) return;
+                try {
+                    const res = await fetch("/api/riddle/solve", {
+                        method: "POST", 
+                        headers: getHeaders(), 
+                        body: JSON.stringify({ riddle_id: profile.daily_riddle.id, answer: dailyRiddleAnswer })
+                    });
+                    if (res.status === 429) { stopPersistentToast(); triggerNotification("Мудрецы обдумывают ответ...", "warning"); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (res.ok && d.status === "success") {
+                        triggerNotification(d.message, "success");
+                        setDailyRiddleAnswer("");
+                        await syncProfile(); // Мгновенное обновление кошелька
+                    } else if (d.status === "already_solved" || d.status === "wrong") {
+                        triggerNotification(d.message, d.status === "wrong" ? "error" : "info");
+                    } else {
+                        triggerNotification(d.detail || "Ошибка проверки", "error");
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка сети", "error"); }
+            };
+            const handleRandomEventChoice = async (eventId, choice) => {
+                try {
+                    const res = await fetch(`/api/quest/random-event/${eventId}/choice`, {
+                        method: "POST", headers: getHeaders(), body: JSON.stringify({ choice })
+                    });
+                    const d = await res.json();
+                    if (d.status === "success") {
+                        triggerNotification(d.message, "success");
+                    } else {
+                        triggerNotification(d.message, "error");
+                    }
+                } catch(e) { triggerNotification("Ошибка сети", "error"); }
+                setActiveRandomEvent(null);
+                loadData(true);
+            };
+            const verifyPosition = async () => {
+                tg?.HapticFeedback?.impactOccurred('heavy');
+                const opId = startPersistentToast("⏳ Сверка координат с орбитальной группировкой...");
+                if (!opId) return;
+                try {
+                    const res = await fetch("/api/quest/verify-location", {
+                        method: "POST", headers: getHeaders(), body: JSON.stringify(coords)
+                    });
+                    if (res.status === 429) { stopPersistentToast(); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (d.status === "success") {
+                        triggerNotification("Вы успешно прибыли на точку квеста!", "success");
+                        if (d.npc_started) triggerNotification("Здесь вас ждет персонаж!", "success");
+                        if (d.random_event) setActiveRandomEvent(d.random_event);
+                        await loadData(true);
+                    } else if (d.status === "no_stamina") {
+                        // --- ИСПРАВЛЕНО: Открываем драматичное окно одышки вместо сухой ошибки ---
+                        tg?.HapticFeedback?.notificationOccurred('warning');
+                        setExhaustedModal(d);
+                    } else if (d.status === "too_far") {
+                        triggerNotification(d.message, "error");
+                    } else if (d.status === "banned" || d.status === "speed_warning") {
+                        triggerNotification(d.message, "error");
+                        await loadData(true);
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка связи.", "error"); }
+            };
+            const [userAns, setUserAns] = useState("");
+            const submitAnswer = async () => {
+                if (!userAns) return;
+                tg?.HapticFeedback?.impactOccurred('heavy');
+                const opId = startPersistentToast("⏳ Проверка ответа в архивах...");
+                if (!opId) return;
+                try {
+                    const res = await fetch("/api/quest/submit-answer", {
+                        method: "POST", headers: getHeaders(), body: JSON.stringify({ answer: userAns })
+                    });
+                    if (res.status === 429) { stopPersistentToast(); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (d.status === "next_step") {
+                        triggerNotification(d.message, "success");
+                        setUserAns("");
+                        setUnlockedHints({});
+                        await loadData(true);
+                    } else if (d.status === "finished") {
+                        triggerNotification(d.message, "success");
+                        if (d.achievements && d.achievements.length > 0) setAchievementsAlerts(d.achievements);
+                        setUserAns("");
+                        await loadData(true);
+                    } else if (d.status === "wrong") {
+                        triggerNotification(d.message, "error");
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка обработки ответа.", "error"); }
+            };
+            const selectNpcChoice = async (idx) => {
+                tg?.HapticFeedback?.impactOccurred('medium');
+                const opId = startPersistentToast("⏳ Собеседник обдумывает вашу реплику...");
+                if (!opId) return;
+                try {
+                    const res = await fetch(`/api/quest/npc-choice/${idx}`, { method: "POST", headers: getHeaders() });
+                    if (res.status === 429) { stopPersistentToast(); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (d.status === "finished") {
+                        if (d.message) triggerNotification(d.message, "success");
+                        if (d.achievements && d.achievements.length > 0) setAchievementsAlerts(d.achievements);
+                        await loadData(true);
+                    } else {
+                        if (d.message) triggerNotification(d.message, "success");
+                        await loadData(true);
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка взаимодействия.", "error"); }
+            };
+            const unlockHint = async (idx, isPaid) => {
+                if (isPaid) {
+                    try {
+                        const res = await fetch(`/api/quest/buy-hint/${idx}`, {method:"POST", headers: getHeaders()});
+                        if (!res.ok) {
+                            const err = await res.json();
+                            triggerNotification(err.detail, "error");
+                            return;
+                        }
+                        triggerNotification("Подсказка успешно куплена из буфера!", "success");
+                        await syncProfile(); // Мгновенное обновление кошелька
+                    } catch(e) { triggerNotification("Ошибка покупки", "error"); return; }
+                }
+                setUnlockedHints(prev => ({...prev, [idx]: Date.now()}));
+            };
+            const enterMarket = async (marketId) => {
+                try {
+                    const res = await fetch("/api/shop/enter", {
+                        method: "POST", headers: getHeaders(), 
+                        body: JSON.stringify({ market_id: marketId, latitude: coords.latitude, longitude: coords.longitude })
+                    });
+                    const d = await res.json();
+                    if (res.ok && d.status === "success") {
+                        triggerNotification(d.message, "success");
+                        setSelectedMarketId(marketId);
+                        setActiveTab('shop');
+                    } else {
+                        triggerNotification(d.message || d.detail, "error");
+                    }
+                } catch (e) { triggerNotification("Ошибка входа в магазин", "error"); }
+            };
+
+
+
+
+            const interactWithNpc = async (npcId, nodeId = "start", choiceIdx = null) => {
+                tg?.HapticFeedback?.impactOccurred('medium');
+                const opId = startPersistentToast("⏳ Персонаж обращает на вас внимание...");
+                if (!opId) return;
+                try {
+                    const res = await fetch(`/api/npc/${npcId}/interact`, {
+                        method: "POST", headers: getHeaders(), 
+                        body: JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude, current_node: nodeId, choice_idx: choiceIdx })
+                    });
+                    if (res.status === 429) { stopPersistentToast(); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (d.status === "no_stamina") {
+                        tg?.HapticFeedback?.notificationOccurred('warning');
+                        setExhaustedModal(d);
+                        return;
+                    }
+                    if (d.status === "too_far" || d.status === "error") {
+                        triggerNotification(d.message, "error");
+                    } else {
+                        if (d.reward_msg) triggerNotification(d.reward_msg, "success");
+                        if (d.status === "exit") {
+                            setActiveStandaloneNpc(null);
+                            await syncProfile(); // Убирает лаги синхронизации при выходе
+                        } else if (d.status === "dialogue") {
+                            setActiveStandaloneNpc({
+                                id: npcId, node_id: d.node_id, name: d.npc_name, text: d.text, options: d.options
+                            });
+                            setSelectedPoint(null);
+                        }
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка взаимодействия", "error"); }
+            };
+
+            const buyItem = async (itemId) => {
+                tg?.HapticFeedback?.notificationOccurred('success'); // ИСПРАВЛЕНО: Заменено impactOccurred на валидный notificationOccurred
+                const opId = startPersistentToast("⏳ Оформление купеческой грамоты...");
+                if (!opId) return;
+                try {
+                    const res = await fetch(`/api/shop/buy/${itemId}`, { method: "POST", headers: getHeaders() });
+                    if (res.status === 429) {
+                        stopPersistentToast();
+                        triggerNotification("Слишком быстро! Подождите секунду перед новой покупкой.", "warning");
+                        return;
+                    }
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                        triggerNotification(`Приобретено: ${d.item_name || "товар"}!`, "success");
+                        await syncProfile(); // Мгновенное бесшумное обновление кошелька
+                    } else {
+                        triggerNotification(d.detail || "Ошибка покупки", "error");
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка сети.", "error"); }
+            };
+
+            const useConsumable = async (name) => {
+                try {
+                    const res = await fetch(`/api/inventory/use/${name}`, { method: "POST", headers: getHeaders() });
+                    const d = await res.json();
+                    triggerNotification(d.message, "success");
+                    loadData(true);
+                } catch (e) { triggerNotification("Ошибка активации.", "error"); }
+            };
+
+            const discardItem = async (name) => {
+                try {
+                    const res = await fetch(`/api/inventory/discard/${name}`, { method: "POST", headers: getHeaders() });
+                    if (res.ok) {
+                        triggerNotification("Предмет утилизирован.", "success");
+                        loadData(true);
+                    }
+                } catch (e) { triggerNotification("Ошибка.", "error"); }
+            };
+
+            // ФУНКЦИЯ ДЛЯ КРАФТА (Оборудована UI Escrow защитой по ТЗ)
+            const craftItem = async (recipeId) => {
+                tg?.HapticFeedback?.impactOccurred('heavy');
+                const opId = startPersistentToast("⏳ Мастера-кузнецы выковывают артефакт...");
+                if (!opId) return;
+                try {
+                    const res = await fetch(`/api/craft/${recipeId}`, { method: "POST", headers: getHeaders() });
+                    if (res.status === 429) { stopPersistentToast(); return; }
+                    
+                    stopPersistentToast();
+                    const d = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                        triggerNotification(`Успешно создано: ${d.result_item || "предмет"}!`, "success");
+                        await loadData(true);
+                    } else {
+                        triggerNotification(d.detail || "Ошибка крафта", "error");
+                    }
+                } catch (e) { stopPersistentToast(); triggerNotification("Ошибка создания артефакта", "error"); }
+            };
+            const isGpsVerified = activeQuest ? activeQuest.gps_verified : false;
+            const npcNode = activeQuest?.current_npc_node ? activeQuest.step?.npc_dialogue?.[activeQuest.current_npc_node] : null;
+            const hasNpc = Boolean(npcNode);
+            const targetRadius = activeQuest?.step?.radius_meters || 30;
+
+            const distToSelected = selectedPoint ? parseInt(calculateHaversine(coords.latitude, coords.longitude, selectedPoint.lat, selectedPoint.lng)) : null;
+
+            return (
+                <div class="max-w-md mx-auto relative min-h-screen flex flex-col bg-slate-950">
+                    
+                    {activeRandomEvent && (
+                        <div class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
+                            <div class="bg-slate-900 border border-indigo-500/50 rounded-2xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(99,102,241,0.3)] animate-slideUp">
+                                <div class="text-4xl text-center mb-4">
+                                    {activeRandomEvent.type === 'merc' ? '🧙‍♂️' : activeRandomEvent.type === 'scroll' ? '📜' : COIN_SYMBOL}
+                                </div>
+                                <h3 class="text-xl font-black text-white text-center mb-2 uppercase tracking-widest text-indigo-400">Случайное событие</h3>
+                                <p class="text-sm text-slate-300 text-center mb-6 leading-relaxed">{activeRandomEvent.text}</p>
+                                
+                                <div class="space-y-3">
+                                    {activeRandomEvent.type === 'merc' && (
+                                        <>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'yes')} class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg">🤝 Нанять (+{activeRandomEvent.xp} XP)</button>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'no')} class="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-bold border border-slate-700">Отказаться</button>
+                                        </>
+                                    )}
+                                    {activeRandomEvent.type === 'scroll' && (
+                                        <>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'yes')} class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg">🧪 Расшифровать ({Math.abs(activeRandomEvent.coins)} {COIN_SYMBOL})</button>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'no')} class="w-full py-3 bg-slate-800 text-slate-400 rounded-xl font-bold border border-slate-700">Пройти мимо</button>
+                                        </>
+                                    )}
+                                    {activeRandomEvent.type === 'wallet' && (
+                                        <>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'take')} class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg">💰 Забрать себе (+{activeRandomEvent.coins} {COIN_SYMBOL})</button>
+                                            <button onClick={() => handleRandomEventChoice(activeRandomEvent.id, 'leave')} class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg border border-emerald-500">🙌 Оставить (+2 Кармы)</button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {achievementsAlerts.length > 0 && (
+                        <div class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[3000] flex items-center justify-center p-4">
+                            <div class="bg-gradient-to-br from-amber-500/20 to-amber-900/40 border border-amber-500/50 rounded-2xl p-6 w-full max-w-sm shadow-[0_0_50px_rgba(245,158,11,0.3)] animate-slideUp text-center">
+                                <div class="text-6xl mb-4 animate-bounce">{achievementsAlerts[0].badge}</div>
+                                <h3 class="text-xs font-black text-amber-500 uppercase tracking-widest mb-1">Достижение разблокировано!</h3>
+                                <h2 class="text-2xl font-black text-white mb-2">{achievementsAlerts[0].name}</h2>
+                                <p class="text-sm text-amber-200 mb-4">{achievementsAlerts[0].desc}</p>
+                                <div class="inline-block bg-amber-500/20 text-amber-400 font-bold px-4 py-2 rounded-lg border border-amber-500/30 mb-6">
+                                    Награда: +{achievementsAlerts[0].coins} {COIN_SYMBOL}
+                                </div>
+                                <button 
+                                    onClick={() => setAchievementsAlerts(prev => prev.slice(1))} 
+                                    class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl font-black shadow-lg"
+                                >
+                                    Забрать награду
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {inspectedItem && (
+                        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[5000] flex items-center justify-center p-4 animate-slideUp">
+                            <div class="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-xs shadow-2xl text-slate-900 relative">
+                                <button onClick={() => setInspectedItem(null)} class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
+                                    <i data-lucide="x" class="w-5 h-5"></i>
+                                </button>
+                                
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                                        📦
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] font-black uppercase tracking-widest text-indigo-600 block">
+                                            {inspectedItem.type === 'CONSUMABLE' ? 'Расходник' : inspectedItem.type === 'TICKET' ? 'Пропуск' : 'Артефакт'}
+                                        </span>
+                                        <h3 class="text-base font-black leading-tight text-slate-900">{inspectedItem.name}</h3>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-xs text-slate-600 leading-relaxed mb-4 pb-4 border-b border-slate-100 font-medium">
+                                    {inspectedItem.description}
+                                </p>
+                                
+                                <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl">
+                                    <span>⚖️ Вес: {inspectedItem.weight || 0} кг</span>
+                                    <span class="font-mono text-[10px] text-slate-400">#{inspectedItem.slug}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {profile && profile.current_city_id === null && (
+                        <div class="fixed inset-0 bg-slate-950 z-[1000] flex flex-col items-center justify-center p-6 text-center">
+                            <span class="text-6xl mb-6">🏙️</span>
+                            <h2 class="text-2xl font-black text-white mb-2">Добро пожаловать!</h2>
+                            <p class="text-slate-400 text-sm mb-8">Выберите ваш город для начала игры.</p>
+                            <div class="w-full space-y-3">
+                                {cities.map(city => (
+                                    <button 
+                                        key={city.id} 
+                                        onClick={() => updateLocationSettings(city.id, true)}
+                                        class="w-full p-4 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 font-bold rounded-xl border border-indigo-500/30 transition-colors"
+                                    >
+                                        {city.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ВОЗВРАЩЕНЫЙ ВИЗУАЛЬНЫЙ ЯКОРЬ УДЕРЖИВАЕМОГО ТОСТА */}
+                    {persistentToast && (
+                        <div class="fixed top-16 left-4 right-4 z-[9999] bg-amber-500 border-2 border-amber-400 text-slate-950 p-3.5 rounded-2xl shadow-2xl flex items-center justify-between font-black animate-bounce pointer-events-auto">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs tracking-wide">{persistentToast.text}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div class="fixed top-20 left-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+                        {notifications.map(n => (
+                            <div key={n.id} class={`p-3 rounded-xl shadow-lg border text-white font-medium flex items-start justify-between transition-all duration-300 pointer-events-auto ${n.type === "success" ? "bg-emerald-600 border-emerald-500" : "bg-rose-600 border-rose-500"}`}>
+                                <span class="text-xs whitespace-pre-wrap leading-relaxed">{n.text}</span>
+                                <button onClick={() => setNotifications(prev => prev.filter(x => x.id !== n.id))} class="text-white hover:text-gray-200 shrink-0 ml-3">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {showClassModal && (
+                        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm">
+                                <h3 class="text-lg font-bold text-white mb-4">Выберите путь</h3>
+                                <div class="space-y-3">
+                                    <button onClick={() => changeClass('merchant')} class="w-full text-left p-3 bg-slate-800 rounded-xl hover:bg-slate-700">
+                                        <div class="font-bold text-amber-400">💰 Купец</div>
+                                        <div class="text-xs text-slate-400">+20% золота за контрольные точки</div>
+                                    </button>
+                                    <button onClick={() => changeClass('ranger')} class="w-full text-left p-3 bg-slate-800 rounded-xl hover:bg-slate-700">
+                                        <div class="font-bold text-emerald-400">🏹 Следопыт</div>
+                                        <div class="text-xs text-slate-400">Ускоренная перезарядка бесплатных подсказок</div>
+                                    </button>
+                                    <button onClick={() => changeClass('historian')} class="w-full text-left p-3 bg-slate-800 rounded-xl hover:bg-slate-700">
+                                        <div class="font-bold text-blue-400">📜 Историк</div>
+                                        <div class="text-xs text-slate-400">Удвоенные очки рейтинга (score)</div>
+                                    </button>
+                                </div>
+                                <button onClick={() => setShowClassModal(false)} class="mt-4 w-full py-2 bg-rose-600/20 text-rose-400 rounded-xl font-bold">Отмена</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* МОДАЛКА КЛИКАБЕЛЬНОГО ДОСТИЖЕНИЯ */}
+                    {inspectedAch && (
+                        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[6000] flex items-center justify-center p-4 animate-slideUp" onClick={() => setInspectedAch(null)}>
+                            <div class={`border-2 rounded-3xl p-6 w-full max-w-xs text-center shadow-2xl relative cursor-pointer ${inspectedAch.tier === 'diamond' ? 'bg-gradient-to-b from-cyan-50 to-blue-50 border-cyan-400 text-slate-900 shadow-cyan-500/30' : inspectedAch.tier === 'silver' ? 'bg-gradient-to-b from-slate-50 to-slate-100 border-slate-400 text-slate-900 shadow-slate-500/20' : 'bg-gradient-to-b from-amber-50 to-orange-50 border-amber-500 text-slate-900 shadow-amber-500/20'}`} onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setInspectedAch(null)} class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                                <div class="text-6xl mb-2 animate-bounce">{inspectedAch.badge || "🏆"}</div>
+                                <span class={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border mb-3 inline-block ${inspectedAch.tier === 'diamond' ? 'bg-cyan-500 text-white border-cyan-600' : inspectedAch.tier === 'silver' ? 'bg-slate-400 text-white border-slate-500' : 'bg-amber-600 text-white border-amber-700'}`}>
+                                    {inspectedAch.tier === 'diamond' ? '💎 Алмазный ранг' : inspectedAch.tier === 'silver' ? '🥈 Серебряный ранг' : '🥉 Бронзовый ранг'}
+                                </span>
+                                <h3 class="text-xl font-black mb-2">{inspectedAch.name}</h3>
+                                <p class="text-xs leading-relaxed font-medium mb-6">{inspectedAch.description}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* МОДАЛКА ЧУЖОГО ПРОФИЛЯ */}
+                    {inspectedPlayer && (
+                        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[5000] flex items-center justify-center p-4 animate-slideUp" onClick={() => setInspectedPlayer(null)}>
+                            <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-slate-900 relative max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setInspectedPlayer(null)} class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                                <div class="flex flex-col items-center text-center pb-4 border-b border-slate-100 mb-4">
+                                    <div class="w-16 h-16 rounded-full bg-slate-100 border flex items-center justify-center text-3xl mb-2 shadow-inner">
+                                        {inspectedPlayer.is_anonymous ? "👻" : "👤"}
+                                    </div>
+                                    <h3 class="text-lg font-black">{inspectedPlayer.full_name}</h3>
+                                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest">{inspectedPlayer.rpg_class}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-center mb-4">
+                                    <div class="bg-slate-50 p-2.5 rounded-2xl border"><span class="text-[10px] text-slate-400 font-bold block uppercase">Уровень</span><span class="text-sm font-black text-slate-800">{inspectedPlayer.level} Lvl</span></div>
+                                    <div class="bg-slate-50 p-2.5 rounded-2xl border"><span class="text-[10px] text-slate-400 font-bold block uppercase">Рейтинг</span><span class="text-sm font-black text-indigo-600">{inspectedPlayer.score} pts</span></div>
+                                </div>
+                                {!inspectedPlayer.is_anonymous && (
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center text-xs font-bold px-1"><span class="text-slate-400 uppercase">Пройдено экспедиций:</span><span class="text-emerald-600 font-black">{inspectedPlayer.completed_quests_count} шт.</span></div>
+                                        <div>
+                                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Открытые регалии ({inspectedPlayer.achievements.length}):</span>
+                                            <div class="grid grid-cols-4 gap-2">
+                                                {inspectedPlayer.achievements.map((ach, i) => (
+                                                    <div key={i} onClick={() => setInspectedAch(ach)} class={`p-2 rounded-2xl border flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-transform ${ach.tier === 'diamond' ? 'bg-cyan-50/50 border-cyan-300' : ach.tier === 'silver' ? 'bg-slate-50 border-slate-300' : 'bg-amber-50/50 border-amber-300'}`}>
+                                                        <span class="text-xl mb-1">{ach.badge}</span>
+                                                        <div class={`w-1.5 h-1.5 rounded-full ${ach.tier === 'diamond' ? 'bg-cyan-500' : ach.tier === 'silver' ? 'bg-slate-400' : 'bg-amber-500'}`}></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ЭКРАН ДРАМАТИЧНОЙ ОДЫШКИ (ГЕО-АРБИТРАЖ) */}
+                    {exhaustedModal && (
+                        <div class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[8000] flex items-center justify-center p-4 animate-slideUp">
+                            <div class="bg-slate-900 border-2 border-amber-500/80 rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(245,158,11,0.25)] text-center relative">
+                                <button onClick={() => setExhaustedModal(null)} class="absolute top-4 right-4 text-slate-500 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+                                
+                                <div class="text-6xl mb-3 animate-pulse">⚡️</div>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full inline-block mb-2">
+                                    Бодрость: {exhaustedModal.stamina} / {exhaustedModal.max_stamina}
+                                </span>
+                                <h2 class="text-xl font-black text-white mb-2 uppercase">Вы сильно выдохлись!</h2>
+                                <p class="text-xs text-slate-300 mb-6 leading-relaxed font-medium">
+                                    Персонажу не хватает сил для марш-броска. Энергия восстанавливается сама (+1 ед. каждые 3 минуты).
+                                </p>
+
+                                <div class="space-y-3 text-left">
+                                    <button onClick={instantExpressCoffee} class="w-full p-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-2xl font-black text-xs shadow-lg flex items-center justify-between active:scale-95 transition-all">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-2xl">☕️</span>
+                                            <div>
+                                                <div class="leading-tight">Экспресс Эспрессо (+45 ⚡️)</div>
+                                                <div class="text-[9px] font-normal text-amber-200 opacity-90">Доставка курьером прямо сюда</div>
+                                            </div>
+                                        </div>
+                                        <span class="bg-slate-950/40 px-2.5 py-1.5 rounded-xl text-amber-300 shrink-0 ml-2">75 {COIN_SYMBOL}</span>
+                                    </button>
+
+                                    <div class="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2.5">
+                                        <span class="text-xl">💡</span>
+                                        <span>
+                                            <strong class="text-emerald-400 block mb-0.5">Совет экономии:</strong>
+                                            В торговых лавках на карте этот же Эспрессо стоит всего <b class="text-white">30 {COIN_SYMBOL}</b>. Дойдите ногами!
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ПАРЯЩИЕ ВИДЖЕТЫ HUD (Тег header полностью вырезан из DOM) */}
+                    {profile && (
+                        <div class="fixed top-3 left-0 right-0 max-w-md mx-auto px-3 z-50 flex justify-between items-start pointer-events-none">
+                            {/* Виджет слева: Карма + Прогресс уровня */}
+                            <div class="pointer-events-auto flex flex-col gap-1 w-32 bg-slate-900/90 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-lg">
+                                <div class="flex items-center justify-between text-xs px-0.5 font-bold">
+                                    <span class="text-emerald-400">☯ Кар: {profile.karma ?? 0}</span>
+                                    <span class="text-indigo-300 text-[10px] font-black">{profile.level} Lvl</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-indigo-900/50">
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (profile.xp / (profile.level * 150)) * 100)}%` }}></div>
+                                </div>
+                            </div>
+
+                            {/* Виджет справа: Двойная каплю Стамина + Монеты (Вариант А) */}
+                            <div class="pointer-events-auto bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-slate-800/80 shadow-lg flex items-center gap-2 divide-x divide-slate-800">
+                                <div class="flex items-center gap-1 pr-1" onClick={() => triggerNotification("⚡️ Бодрость: +1 ед. каждые 3 минуты", "info")}>
+                                    <span class="text-amber-400 text-xs animate-pulse">⚡️</span>
+                                    <span class={`font-black text-xs ${profile.stamina < 20 ? "text-rose-400 animate-bounce" : "text-slate-200"}`}>
+                                        {profile.stamina ?? 100}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1 pl-2">
+                                    <span class="text-amber-400 text-xs">{COIN_SYMBOL}</span>
+                                    <span class="text-amber-300 font-extrabold text-xs">{profile.coins ?? 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* На чистой карте отступ 0 (карта в потолок), на остальных вкладках — 16, чтобы контент не залезал под виджеты */}
+                    <main class={`flex-grow ${activeTab === "quest" && !activeQuest ? "pt-0" : "pt-16"} pb-20 relative w-full h-full`}>
+                        {loading && (
+                            <div class="fixed inset-0 z-[9999] bg-slate-950/60 backdrop-blur-xs flex flex-col items-center justify-center gap-4 pointer-events-auto">
+                                <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-slate-400 font-bold text-sm">Синхронизация...</span>
+                            </div>
+                        )}
+                        
+                        {activeTab === "quest" && (
+                            <div class="w-full h-full">
+                                {!activeQuest && (
+                                    <div class="w-full h-full absolute inset-0 z-0 pt-0 pb-16">
+                                        <div ref={mapContainerRef} class="w-full h-full"></div>
+                                        
+                                        {profile?.is_tester && (
+                                            <div class="absolute top-20 right-4 z-[400] bg-slate-900/90 backdrop-blur border border-slate-800 p-3 rounded-2xl shadow-xl flex flex-col gap-2.5 max-w-[150px]">
+                                                <button onClick={() => setMockGps(!mockGps)} class="text-[10px] font-black px-3 py-2 rounded-xl bg-rose-600 text-white shadow-md active:scale-95 transition-all">
+                                                    {mockGps ? "🔌 СИМ GPS" : "⚙️ РЕАЛ GPS (QA)"}
+                                                </button>
+                                                
+                                                {/* Кнопка симуляции расхода энергии для тестировщика */}
+                                                <button onClick={toggleMortalModeQA} class={`text-[9px] font-black px-2.5 py-2 rounded-xl text-white shadow-md active:scale-95 transition-all uppercase tracking-wider ${mortalMode ? "bg-amber-600 animate-pulse border border-amber-400" : "bg-indigo-600"}`}>
+                                                    {mortalMode ? "🔋 Смертный (Расход)" : "🔌 Бог (Безлимит ⚡️)"}
+                                                </button>
+
+                                                {mockGps && selectedPoint && (
+                                                    <button onClick={() => { setCoords({ latitude: selectedPoint.lat, longitude: selectedPoint.lng }); pingLocation(selectedPoint.lat, selectedPoint.lng); }} class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold px-3 py-2 rounded-xl shadow-md active:scale-95 transition-all">
+                                                        📍 ПРЫЖОК
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {selectedPoint && (
+                                            <div class="absolute bottom-20 left-4 right-4 bg-slate-900 border border-slate-700 rounded-2xl p-5 z-[500] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transform transition-transform animate-slideUp">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1 block">
+                                                            {selectedPoint.type === 'quest' ? "Сюжетный Квест" : selectedPoint.type === 'market' ? "Скупщик Артефактов" : selectedPoint.type === 'npc' ? "Персонаж" : "AR Зона"}
+                                                        </span>
+                                                        <h3 class="text-lg font-bold text-white leading-tight">{selectedPoint.title}</h3>
+                                                    </div>
+                                                    <button onClick={() => setSelectedPoint(null)} class="text-slate-500 hover:text-white bg-slate-800 p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                                </div>
+                                                
+                                                {selectedPoint.description && (
+                                                    <p class="text-xs text-slate-400 mb-4 line-clamp-3">{selectedPoint.description}</p>
+                                                )}
+
+                                                {selectedPoint.welcome_message && (
+                                                    <div class="bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-4 mb-3">
+                                                        <div class="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Сообщение</div>
+                                                        <div class="text-base font-extrabold text-white leading-snug">
+                                                            {selectedPoint.welcome_message}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-800">
+                                                    <div class="flex justify-between items-center text-xs font-bold">
+                                                        <span class="text-slate-500 uppercase tracking-wider">Дистанция:</span>
+                                                        <span class={distToSelected <= (selectedPoint.radius || 50) ? "text-emerald-400" : "text-amber-400"}>
+                                                            {distToSelected} метров
+                                                        </span>
+                                                    </div>
+
+                                                    {selectedPoint.type === 'quest' && (
+                                                        <button 
+                                                            disabled={selectedPoint.is_locked || distToSelected > 30}
+                                                            onClick={() => startQuest(selectedPoint.id)}
+                                                            class={`w-full py-3 rounded-xl font-bold text-sm tracking-wide mt-2 transition-colors ${selectedPoint.is_locked ? "bg-slate-800 text-slate-600 border border-slate-700" : distToSelected > 30 ? "bg-indigo-900/50 text-indigo-300 border border-indigo-800" : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/50"}`}
+                                                        >
+                                                            {selectedPoint.is_locked ? `🔒 Требуется Уровень ${selectedPoint.min_level_required}` : distToSelected > 30 ? `🚶‍♂️ Подойдите ближе (радиус 30м)` : "🏃‍♂️ НАЧАТЬ ПРИКЛЮЧЕНИЕ"}
+                                                        </button>
+                                                    )}
+
+                                                    {selectedPoint.type === 'market' && (
+                                                        <button 
+                                                            onClick={() => enterMarket(selectedPoint.id)}
+                                                            class={`w-full py-3 rounded-xl font-bold text-sm tracking-wide mt-2 transition-colors ${distToSelected > (selectedPoint.radius || 50) ? "bg-emerald-900/50 text-emerald-300 border border-emerald-800" : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/50"}`}
+                                                        >
+                                                            {distToSelected > (selectedPoint.radius || 50) ? `🚶‍♂️ Подойдите ближе (${selectedPoint.radius || 50}м)` : "🏪 ВОЙТИ В ЛАВКУ"}
+                                                        </button>
+                                                    )}
+
+                                                    {selectedPoint.type === 'npc' && (
+                                                        <button 
+                                                            onClick={() => interactWithNpc(selectedPoint.id, "start", null)}
+                                                            class={`w-full py-3 rounded-xl font-bold text-sm tracking-wide mt-2 transition-colors ${distToSelected > (selectedPoint.radius || 30) ? "bg-amber-900/50 text-amber-300 border border-amber-800" : "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/50"}`}
+                                                        >
+                                                            {distToSelected > (selectedPoint.radius || 30) ? `🚶‍♂️ Подойдите ближе (${selectedPoint.radius || 30}м)` : "🗣 ПОГОВОРИТЬ"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ОКНО АВТОНОМНОГО ДИАЛОГА С NPC */}
+                                {activeStandaloneNpc && (
+                                    <div class="absolute bottom-20 left-4 right-4 bg-slate-900 border border-amber-900/80 p-5 rounded-2xl z-[500] shadow-[0_-10px_40px_rgba(245,158,11,0.2)] animate-slideUp">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-full bg-amber-950 border border-amber-800 flex items-center justify-center text-lg">🗣</div>
+                                                <div>
+                                                    <h4 class="font-extrabold text-sm text-amber-400 uppercase tracking-widest">{activeStandaloneNpc.name}</h4>
+                                                    <span class="text-[10px] text-slate-500 font-bold">Персонаж локации</span>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setActiveStandaloneNpc(null)} class="text-slate-500 hover:text-white bg-slate-800 p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                        </div>
+                                        
+                                        <p class="text-sm font-semibold text-white leading-relaxed italic mb-4">«{activeStandaloneNpc.text}»</p>
+                                        
+                                        <div class="grid gap-2">
+                                            {activeStandaloneNpc.options.map((opt, idx) => {
+                                                const reqItem = opt.item_take;
+                                                const hasItem = reqItem ? inventory.items.includes(reqItem) : true;
+                                                
+                                                return (
+                                                    <button 
+                                                        key={idx} 
+                                                        onClick={() => {
+                                                            if (reqItem && !hasItem) triggerNotification(`Нужен предмет: ${reqItem}`, "error");
+                                                            else interactWithNpc(activeStandaloneNpc.id, activeStandaloneNpc.node_id, idx);
+                                                        }} 
+                                                        class={`text-left w-full border p-3 rounded-xl text-xs font-bold flex justify-between items-center transition-colors ${reqItem && !hasItem ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                                                    >
+                                                        <span>{reqItem && !hasItem && "🔒 "}{opt.text}</span>
+                                                        <span class="text-[10px] shrink-0 ml-2">{reqItem && !hasItem ? 'нет предмета' : 'выбрать →'}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeQuest && (
+                                    <div class="space-y-4 px-4 h-full overflow-y-auto pb-4 pt-2 relative z-10 bg-slate-950">
+                                        
+                                        {(activeQuest.pending_coins > 0 || activeQuest.pending_xp > 0 || activeQuest.pending_karma !== 0) && (
+                                            <div class="bg-indigo-950/60 border border-indigo-800/80 p-4 rounded-2xl flex items-center justify-between shadow-inner">
+                                                <div>
+                                                    <h4 class="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Рюкзак квеста (Не сохранено)</h4>
+                                                    <div class="flex gap-3 text-sm font-bold">
+                                                        {activeQuest.pending_coins > 0 && <span class="text-amber-400">{COIN_SYMBOL} {activeQuest.pending_coins}</span>}
+                                                        {activeQuest.pending_xp > 0 && <span class="text-blue-400">🌟 {activeQuest.pending_xp} XP</span>}
+                                                        {activeQuest.pending_karma !== 0 && <span class={activeQuest.pending_karma > 0 ? "text-emerald-400" : "text-rose-400"}>☯️ {activeQuest.pending_karma}</span>}
+                                                    </div>
+                                                </div>
+                                                <div class="w-10 h-10 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 border border-indigo-700/50">🎒</div>
+                                            </div>
+                                        )}
+
+                                        {profile?.is_tester && (
+                                            <div class="bg-rose-950/40 border border-rose-800/60 p-4 rounded-2xl space-y-3 shadow-lg">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-xs font-bold text-rose-300 uppercase tracking-wider">QA Панель Тестировщика</span>
+                                                    <button onClick={() => setMockGps(!mockGps)} class="text-[10px] font-black text-white bg-rose-700 hover:bg-rose-600 px-2.5 py-1 rounded-lg transition-colors">
+                                                        {mockGps ? "🔌 Вкл. Реал GPS" : "⚙️ Симулятор"}
+                                                    </button>
+                                                </div>
+                                                <button onClick={() => { setCoords({ latitude: activeQuest.step.latitude, longitude: activeQuest.step.longitude }); verifyPosition(); }} class="w-full bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold shadow active:scale-95 transition-all">
+                                                    📍 Прыжок на текущую точку
+                                                </button>
+                                                {mockGps && (
+                                                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-rose-800/50">
+                                                        <button onClick={() => { const newCoords = { latitude: activeQuest.step.latitude, longitude: activeQuest.step.longitude }; setCoords(newCoords); setCurrentDistance(0); pingLocation(newCoords.latitude, newCoords.longitude); }} class="bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl text-xs font-semibold transition-colors">📍 Прыгнуть к цели</button>
+                                                        <button onClick={() => { const newCoords = { latitude: activeQuest.step.latitude + 0.002, longitude: activeQuest.step.longitude - 0.003 }; setCoords(newCoords); setCurrentDistance(350); pingLocation(newCoords.latitude, newCoords.longitude); }} class="bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl text-xs font-semibold transition-colors">🚶‍♂️ Отойти на 350м</button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {!isGpsVerified && (
+                                            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col items-center text-center space-y-4 shadow-xl">
+                                                <div class="relative w-32 h-32 rounded-full border-4 border-slate-800 bg-slate-950 flex items-center justify-center shadow-inner overflow-hidden">
+                                                    <div class="absolute inset-2 rounded-full border border-indigo-500/30"></div>
+                                                    <div class="absolute transition-transform duration-200 ease-linear flex flex-col items-center justify-start h-full" style={{ transform: `rotate(${bearing - compassHeading}deg)` }}>
+                                                        <div class="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[24px] border-l-transparent border-r-transparent border-b-emerald-500 mt-2 shadow-[0_0_15px_rgba(16,185,129,0.8)] filter drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                                                    </div>
+                                                    <div class="w-3 h-3 bg-indigo-500 rounded-full z-10 shadow-[0_0_10px_rgba(99,102,241,1)]"></div>
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-md font-bold text-white">📡 Компас & Радар</h3>
+                                                    <p class="text-xs text-slate-400 mt-1">До Контрольной точки:</p>
+                                                    <span class="text-2xl font-black text-indigo-400 mt-2 block">
+                                                        {currentDistance !== null ? `${currentDistance} метров` : "Поиск GPS..."}
+                                                    </span>
+                                                </div>
+                                                {activeQuest?.step?.welcome_message && (
+                                                    <div class="w-full bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-4">
+                                                        <div class="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Сообщение</div>
+                                                        <div class="text-base font-extrabold text-white leading-snug">
+                                                            {activeQuest.step.welcome_message}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {currentDistance !== null && currentDistance <= targetRadius ? (
+                                                    <button onClick={verifyPosition} class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm tracking-wide px-6 py-3 rounded-xl shadow-lg shadow-emerald-900/40 animate-bounce">
+                                                        📍 Я на месте (Подтвердить)
+                                                    </button>
+                                                ) : (
+                                                    <button disabled class="w-full bg-slate-800 text-slate-500 font-bold text-sm tracking-wide px-6 py-3 rounded-xl cursor-not-allowed border border-slate-700">
+                                                        {currentDistance !== null ? `📍 Подойдите ближе (радиус ${targetRadius}м)` : "📍 Ожидание сигнала..."}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {isGpsVerified && hasNpc && (
+                                            <div class="bg-slate-900 border border-indigo-900/80 p-5 rounded-2xl space-y-4 shadow-lg shadow-indigo-900/20">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-full bg-indigo-950 border border-indigo-800 flex items-center justify-center text-lg">🗣</div>
+                                                    <div>
+                                                        <h4 class="font-extrabold text-sm text-indigo-400 uppercase tracking-widest">{activeQuest.step.npc_name}</h4>
+                                                        <span class="text-[10px] text-slate-500 font-bold">Интерактивный персонаж</span>
+                                                    </div>
+                                                </div>
+                                                <p class="text-sm font-semibold text-white leading-relaxed italic">«{npcNode?.text}»</p>
+                                                <div class="grid gap-2">
+                                                    {npcNode?.options?.map((opt, idx) => {
+                                                        const reqItem = opt.item_take;
+                                                        const hasItem = reqItem ? inventory.items.includes(reqItem) : true;
+                                                        return (
+                                                            <button 
+                                                                key={idx} 
+                                                                onClick={() => { if (reqItem && !hasItem) triggerNotification(`Нужен предмет: ${reqItem}`, "error"); else selectNpcChoice(idx); }} 
+                                                                class={`text-left w-full border p-3 rounded-xl text-xs font-bold flex justify-between items-center transition-colors ${reqItem && !hasItem ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                                                            >
+                                                                <span>{reqItem && !hasItem && "🔒 "}{opt.text}</span>
+                                                                <span class="text-[10px] shrink-0 ml-2">{reqItem && !hasItem ? 'нет предмета' : 'выбрать →'}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isGpsVerified && !hasNpc && (
+                                            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
+                                                <div class="space-y-1">
+                                                    <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Сюжетная загадка</span>
+                                                    <h4 class="text-md font-bold text-white leading-relaxed">{activeQuest.step.instruction_text}</h4>
+                                                </div>
+
+                                                {activeQuest.step.photo_then_id && (
+                                                    <div class="space-y-1">
+                                                        <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Ракурс времени</span>
+                                                        <div ref={sliderRef} onMouseMove={handleMouseMove} onTouchMove={handleTouchMove} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} class="slider-container w-full h-48 rounded-xl border border-slate-800">
+                                                            <img src={activeQuest.step.photo_now_id ? `/api/media/${activeQuest.step.photo_now_id}` : "https://via.placeholder.com/600x400/1e293b/f8fafc?text=Нет+фото"} class="w-full h-full object-cover pointer-events-none" alt="Сейчас" onError={(e) => { e.target.src="https://via.placeholder.com/600x400/ef4444/ffffff?text=Ошибка+загрузки"; }}/>
+                                                            <div class="slider-before" style={{ clipPath: `polygon(0 0, ${sliderValue}% 0, ${sliderValue}% 100%, 0 100%)` }}>
+                                                                <img src={`/api/media/${activeQuest.step.photo_then_id}`} class="w-full h-full object-cover pointer-events-none" alt="Тогда" onError={(e) => { e.target.src="https://via.placeholder.com/600x400/ef4444/ffffff?text=Ошибка+загрузки"; }}/>
+                                                            </div>
+                                                            <div class="slider-handle" style={{ left: `${sliderValue}%` }}>
+                                                                <div class="slider-circle"><span class="text-[10px] font-bold text-white">↔</span></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div class="pt-2">
+                                                    <input type="text" value={userAns} onChange={(e) => setUserAns(e.target.value)} placeholder="Ваш текстовый ответ..." class="w-full bg-slate-950 border border-slate-800 px-4 py-3 rounded-xl text-sm font-semibold text-white placeholder-slate-500 focus:border-indigo-600 mb-3 outline-none transition-colors" />
+                                                    <button onClick={submitAnswer} class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-lg transition-transform active:scale-95">🚀 Отправить ответ</button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isGpsVerified && activeQuest.step.hints && activeQuest.step.hints.filter(h => h.text && h.text.trim() !== "").length > 0 && (
+                                            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                                                <h4 class="text-xs font-bold uppercase tracking-widest text-amber-400">💡 Система подсказок</h4>
+                                                <div class="grid gap-2">
+                                                    {activeQuest.step.hints.filter(h => h.text && h.text.trim() !== "").map((hint, idx) => {
+                                                        const isUnlocked = unlockedHints[idx];
+                                                        const delaySec = hint.delay || 0;
+                                                        const price = hint.price || 0;
+                                                        const timeRemaining = Math.max(0, delaySec - timeElapsed);
+                                                        const prevUnlockedTime = idx > 0 ? unlockedHints[idx - 1] : null;
+                                                        const isVisible = idx === 0 || (prevUnlockedTime && (Date.now() - prevUnlockedTime) >= 10000);
+
+                                                        if (!isVisible) return null;
+
+                                                        if (isUnlocked) return <div key={idx} class="bg-indigo-950/50 p-3 rounded-xl border border-indigo-900/50 text-sm text-indigo-200">{"   " + hint.text}</div>;
+                                                        if (price > 0) return <button key={idx} onClick={() => unlockHint(idx, true)} class="w-full text-left p-3 bg-amber-600/20 text-amber-400 rounded-xl font-bold text-xs border border-amber-900/50 hover:bg-amber-600/30 transition-colors">💰 Купить подсказку ({price} {COIN_LABEL})</button>;
+                                                        if (timeRemaining > 0) {
+                                                            const mins = Math.floor(timeRemaining / 60);
+                                                            const secs = Math.floor(timeRemaining % 60);
+                                                            return <button key={idx} disabled class="w-full text-left p-3 bg-slate-800 text-slate-500 rounded-xl font-bold text-xs border border-slate-700">⏳ Откроется через {mins}:{secs < 10 ? '0':''}{secs}</button>;
+                                                        }
+                                                        return <button key={idx} onClick={() => unlockHint(idx, false)} class="w-full text-left p-3 bg-indigo-600/20 text-indigo-400 rounded-xl font-bold text-xs border border-indigo-900/50 hover:bg-indigo-600/30 transition-colors">💡 Открыть бесплатную подсказку</button>;
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div class="pt-2 pb-6">
+                                            <button onClick={exitQuest} class="w-full bg-rose-950/50 hover:bg-rose-900/60 border border-rose-900 text-rose-500 font-bold text-sm tracking-wide py-3 rounded-xl transition-colors">🛑 Прервать квест (Сброс прогресса)</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === "profile" && profile && (
+                            <div class="space-y-4 px-4 mt-4">
+                                <div class="bg-white border border-slate-200 p-5 rounded-3xl flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-3.5">
+                                        <div class="w-14 h-14 bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center text-3xl shadow-inner shrink-0 overflow-hidden">
+                                            {profile.is_anonymous ? "👻" : tgAvatar ? <img src={tgAvatar} class="w-full h-full object-cover"/> : "👤"}
+                                        </div>
+                                        <div>
+                                            <h3 class="text-lg font-black text-slate-900 leading-tight">{profile.is_anonymous ? "Призрак Пармы" : profile.full_name}</h3>
+                                            <span class="text-[10px] font-black tracking-widest text-indigo-600 uppercase block mt-0.5">
+                                                {profile.rpg_class} {profile.is_tester && <span class="text-rose-600 font-black ml-1">(QA Тестировщик)</span>}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button onClick={toggleAnonymity} class={`p-2.5 rounded-2xl border text-xs font-black flex items-center gap-1.5 transition-all ${profile.is_anonymous ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}>
+                                        <span>{profile.is_anonymous ? "👻 Скрыт" : "👁 Публичен"}</span>
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-2 text-center">
+                                    <div class="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm"><span class="text-[9px] font-black text-slate-400 block uppercase tracking-wider">Уровень</span><span class="text-sm font-black text-slate-900">{profile.level} Lvl</span></div>
+                                    <div class="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm"><span class="text-[9px] font-black text-slate-400 block uppercase tracking-wider">Экспедиций</span><span class="text-sm font-black text-emerald-600">{profile.completed_quests_count || 0} шт.</span></div>
+                                    <div class="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm"><span class="text-[9px] font-black text-slate-400 block uppercase tracking-wider">Рейтинг</span><span class="text-sm font-black text-indigo-600">{profile.score || 0} pts</span></div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onClick={() => setShowClassModal(true)} class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-colors">
+                                        {profile.rpg_class === "Не выбран" ? "🎭 Выбрать Класс" : "🎭 Сменить класс"}
+                                    </button>
+                                <button onClick={claimIncome} class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-colors">
+                                    Собрать {profile.income_buffer || 0} {COIN_LABEL}
+                                </button>
+                            </div>
+
+                            {/* БЛОК ЕЖЕДНЕВНОЙ ЗАГАДКИ */}
+                            {profile.daily_riddle && (
+                                <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3 shadow-lg relative overflow-hidden transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xl">📜</span>
+                                            <h4 class="text-sm font-black uppercase tracking-wider text-amber-400">Загадка дня</h4>
+                                        </div>
+                                        <span class="text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full">
+                                            +{profile.daily_riddle.reward_coins} {COIN_SYMBOL}
+                                        </span>
+                                    </div>
+
+                                    <p class="text-xs font-semibold leading-relaxed text-slate-200">
+                                        {profile.daily_riddle.question}
+                                    </p>
+
+                                    {profile.riddle_solved_today ? (
+                                        <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3 text-center">
+                                            <span class="text-xs font-black text-emerald-400 block">✨ Разгадано! Награда получена.</span>
+                                            <span class="text-[10px] text-slate-400 font-medium mt-0.5 block">Новый свиток откроется завтра</span>
+                                        </div>
+                                    ) : (
+                                        <div class="flex gap-2 pt-1">
+                                            <input 
+                                                type="text" 
+                                                value={dailyRiddleAnswer} 
+                                                onChange={(e) => setDailyRiddleAnswer(e.target.value)} 
+                                                onKeyDown={(e) => { if (e.key === 'Enter') solveDailyRiddle(); }}
+                                                placeholder="Ваш ответ..." 
+                                                class="flex-1 bg-slate-950 border border-slate-800 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white placeholder-slate-500 focus:border-amber-500 outline-none transition-colors"
+                                            />
+                                            <button 
+                                                onClick={solveDailyRiddle}
+                                                class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all shrink-0 active:scale-95"
+                                            >
+                                                Ответить
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div class="bg-white border border-slate-200 p-5 rounded-3xl space-y-4 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-black text-slate-900">🏆 Достижения</h4>
+                                        <div class="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                            {["all", "bronze", "silver", "diamond"].map(t => (
+                                                <button key={t} onClick={() => setAchFilter(t)} class={`px-2.5 py-1 text-[9px] font-black rounded-lg uppercase transition-all ${achFilter === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                                                    {t === 'all' ? 'Все' : t === 'bronze' ? '🥉' : t === 'silver' ? '🥈' : '💎'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                                        {(profile.achievements || []).filter(a => achFilter === 'all' || a.tier === achFilter).length === 0 ? (
+                                            <div class="col-span-2 py-6 text-center text-xs text-slate-400 font-medium">Нет регалий в этой категории.</div>
+                                        ) : (
+                                            (profile.achievements || []).filter(a => achFilter === 'all' || a.tier === achFilter).map((a, idx) => (
+                                                <div key={idx} onClick={() => setInspectedAch(a)} class={`border p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:scale-[1.02] transition-all shadow-sm group ${a.tier === 'diamond' ? 'bg-cyan-50/40 border-cyan-300 hover:border-cyan-500' : a.tier === 'silver' ? 'bg-slate-50 border-slate-300 hover:border-slate-500' : 'bg-amber-50/40 border-amber-300 hover:border-amber-500'}`}>
+                                                    <span class="text-2xl shrink-0 group-hover:scale-110 transition-transform">{a.badge || "🏆"}</span>
+                                                    <div class="overflow-hidden">
+                                                        <div class="text-xs font-black text-slate-900 truncate">{a.name}</div>
+                                                        <span class={`text-[9px] font-black uppercase tracking-widest block truncate ${a.tier === 'diamond' ? 'text-cyan-600' : a.tier === 'silver' ? 'text-slate-500' : 'text-amber-700'}`}>
+                                                            {a.tier === 'diamond' ? '💎 Алмаз' : a.tier === 'silver' ? '🥈 Серебро' : '🥉 Бронза'}
+                                                        </span>
+                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* БЛОК СЮЖЕТНОГО КООПА (В РАЗРАБОТКЕ) */}
+                                                <div class="coop-teaser-banner p-5 rounded-3xl flex items-center justify-between shadow-lg transition-all">
+                                                    <div class="flex items-center gap-3.5 overflow-hidden">
+                                                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                                                            👥
+                                                        </div>
+                                                        <div class="overflow-hidden">
+                                                            <div class="flex items-center gap-2 font-black text-xs uppercase tracking-wider truncate">
+                                                                <span class="coop-title truncate">Сюжетный КооП</span>
+                                                                <span class="bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black shrink-0">СКОРО</span>
+                                                            </div>
+                                                            <p class="text-xs coop-desc font-medium mt-0.5 truncate">Экспедиции с друзьями до 4 чел.</p>
+                                                        </div>
+                                                    </div>
+                                                    <button 
+                                                        onClick={notifyCoopRelease} 
+                                                        class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-black text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all shrink-0 ml-2"
+                                                    >
+                                                        🔔 Жду релиз!
+                                                    </button>
+                                                </div>
+
+                                            </div>
+                                        )}
+
+                        {activeTab === "inventory" && (
+
+                            <div class="space-y-4 px-4 mt-4">
+                                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                    <button onClick={() => setInvTab('items')} class={`flex-1 py-2 text-[11px] font-bold rounded-lg uppercase tracking-wider transition-all duration-200 ${invTab === 'items' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>🎒 Содержимое</button>
+                                    <button onClick={() => setInvTab('craft')} class={`flex-1 py-2 text-[11px] font-bold rounded-lg uppercase tracking-wider transition-all duration-200 ${invTab === 'craft' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>⚒️ Верстак</button>
+                                </div>
+
+                                {invTab === "items" ? (
+                                    <>
+                                        <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                            <div class="flex justify-between text-xs font-bold uppercase text-slate-400 mb-2">
+                                                <span>Грузоподъемность рюкзака</span>
+                                                <span>{inventory.current_weight} / {profile?.max_weight_capacity || 10} кг</span>
+                                            </div>
+                                            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200 mb-1">
+                                                <div class={`h-full rounded-full ${inventory.current_weight > (profile?.max_weight_capacity || 10) ? "bg-rose-500" : "bg-indigo-500"}`} style={{ width: `${Math.min(100, (inventory.current_weight / (profile?.max_weight_capacity || 10)) * 100)}%` }}></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            {inventory.items.length === 0 ? (
+                                                <div class="bg-white border border-slate-200 p-8 rounded-2xl text-center shadow-sm">
+                                                    <span class="text-4xl block mb-2">🎒</span>
+                                                    <h4 class="font-black text-slate-900 text-base">Рюкзак пуст</h4>
+                                                    <p class="text-xs text-slate-500 mt-1">Исследуйте Пермь, чтобы находить тайные реликвии.</p>
+                                                </div>
+                                            ) : (
+                                                inventory.items.map((slug, idx) => {
+                                                    const cleanKey = (slug || "").replace(/^(📦|🎟|🧙‍♂️)\s*/, "").split(" (")[0].trim();
+                                                    const meta = itemsCatalog[cleanKey] || { name: slug, description: "Нажмите, чтобы изучить свойства" };
+                                                    return (
+                                                        <div key={idx} onClick={() => inspectItemBySlug(slug)} class="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all group">
+                                                            <div class="flex items-center gap-3 overflow-hidden">
+                                                                <span class="text-2xl shrink-0 group-hover:scale-110 transition-transform">📦</span>
+                                                                <div class="overflow-hidden">
+                                                                    <h4 class="font-black text-slate-900 text-sm truncate">{meta.name}</h4>
+                                                                    <span class="text-[11px] text-slate-400 font-medium block truncate">{meta.description}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                                {slug.toLowerCase().includes("эликсир") && (
+                                                                    <button onClick={() => useConsumable(slug)} class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black px-3 py-2 rounded-xl shadow-md active:scale-95 transition-all">Выпить</button>
+                                                                )}
+                                                                <button onClick={() => discardItem(slug)} class="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 text-[11px] font-black px-3 py-2 rounded-xl border border-slate-200 hover:border-rose-200 active:scale-95 transition-all">Сбросить</button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div class="space-y-3">
+                                        <div class="bg-amber-50 border border-amber-100 p-4 rounded-xl text-center shadow-sm">
+                                            <span class="text-3xl">⚒️</span>
+                                            <h4 class="font-bold text-amber-600 mt-2 text-sm uppercase tracking-widest">Создание артефактов</h4>
+                                        </div>
+                                        {recipes.length === 0 ? (
+                                            <div class="bg-white border border-slate-200 p-8 rounded-2xl text-center shadow-sm">
+                                                <h4 class="font-black text-slate-900 text-base">Нет изученных схем</h4>
+                                            </div>
+                                        ) : (
+                                            recipes.map(r => {
+                                                const resMeta = itemsCatalog[r.result_item_name] || { name: r.result_item_name };
+                                                return (
+                                                    <div key={r.id} class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                                        <div class="flex items-center justify-between mb-1">
+                                                            <h4 class="text-slate-900 font-black text-base">{r.name}</h4>
+                                                            <button onClick={() => inspectItemBySlug(r.result_item_name)} class="text-xs text-indigo-600 hover:text-indigo-800 font-black flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-xl transition-colors active:scale-95">ℹ️ Что получится?</button>
+                                                        </div>
+                                                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">{r.description}</p>
+                                                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 mb-4 space-y-2">
+                                                            <span class="text-[9px] uppercase text-slate-400 font-black block tracking-widest">Требуемые компоненты:</span>
+                                                            {Object.entries(r.ingredients || {}).map(([ingSlug, amt]) => {
+                                                                const count = inventory.items.filter(i => i === ingSlug).length;
+                                                                const hasEnough = count >= amt;
+                                                                const ingMeta = itemsCatalog[ingSlug] || { name: ingSlug };
+                                                                return (
+                                                                    <div key={ingSlug} onClick={() => inspectItemBySlug(ingSlug)} class="flex justify-between items-center text-xs font-bold p-1.5 rounded-lg hover:bg-white hover:shadow-sm cursor-pointer transition-all">
+                                                                        <span class={`flex items-center gap-2 truncate ${hasEnough ? "text-slate-800" : "text-rose-600"}`}><span>📦</span><span class="underline decoration-dotted underline-offset-2 truncate">{ingMeta.name}</span></span>
+                                                                        <span class={`shrink-0 font-mono text-xs ${hasEnough ? "text-emerald-600 font-black" : "text-rose-600 font-black"}`}>{count} / {amt}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <button onClick={() => craftItem(r.id)} class="w-full bg-amber-500 hover:bg-amber-400 text-white py-3.5 rounded-xl font-black text-sm shadow-md active:scale-95 transition-all">⚒️ Собрать «{resMeta.name}»</button>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === "shop" && (
+
+                            <div class="space-y-4 px-4 mt-4">
+                                <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                    <h3 class="text-lg font-black text-slate-900 mb-2">{selectedMarketId ? "🏪 Локальный рынок" : "🏪 Глобальный магазин"}</h3>
+                                    <p class="text-xs text-slate-500">Обменивайте монеты на сюжетные реликвии, премиум-билеты или расходные материалы.</p>
+                                    {selectedMarketId && (
+                                        <button onClick={() => { setSelectedMarketId(null); loadData(); }} class="mt-3 text-xs text-indigo-600 font-bold underline hover:text-indigo-800">Вернуться в глобальный магазин</button>
+                                    )}
+                                </div>
+                                <div class="grid gap-3">
+                                    {shop.map((item) => (
+                                        <div key={item.id} class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col justify-between gap-3 shadow-sm">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-1">
+                                                    <h4 class="font-black text-md text-slate-900">{item.name}</h4>
+                                                    <span class="text-sm font-extrabold text-amber-500">{item.price} {COIN_LABEL}</span>
+                                                </div>
+                                                <p class="text-xs text-slate-500 leading-normal">{item.description}</p>
+                                            </div>
+                                            <button onClick={() => buyItem(item.id)} class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl text-xs font-black transition-colors shadow-md">Купить за {item.price} {COIN_LABEL}</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === "rating" && (
+
+                            <div class="space-y-4 px-4 mt-4">
+                                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                    {["global", "month", "year"].map((p) => (
+                                        <button key={p} onClick={() => setLeaderboardPeriod(p)} class={`flex-1 py-2 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all duration-200 ${leaderboardPeriod === p ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:text-slate-600"}`}>
+                                            {p === "global" ? "Глобальный" : p === "month" ? "Месяц" : "Год"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden divide-y divide-slate-100 shadow-sm">
+                                    {leaderboard.length === 0 ? (
+                                        <div class="p-8 text-center text-xs text-slate-500">В этой категории пока нет рекордов.</div>
+                                    ) : (
+                                        leaderboard.map((user, idx) => (
+                                            <div key={idx} class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                                                <div class="flex items-center gap-3.5 overflow-hidden">
+                                                    <span class={`w-8 h-8 flex items-center justify-center rounded-2xl text-xs font-black shadow-inner shrink-0 ${idx === 0 ? "bg-amber-400 text-slate-900" : idx === 1 ? "bg-slate-200 text-slate-900" : idx === 2 ? "bg-amber-600 text-white" : "bg-slate-100 text-slate-500 border"}`}>
+                                                        {idx + 1}
+                                                    </span>
+                                                    <div class="overflow-hidden">
+                                                        <h4 class="font-black text-slate-900 text-sm flex items-center gap-2 truncate">
+                                                            <span class="truncate">{user.full_name}</span>
+                                                            <button onClick={() => openPlayerModal(user.telegram_id)} class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-1 rounded-lg transition-colors shrink-0">ℹ️</button>
+                                                        </h4>
+                                                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block truncate">{user.title} | Lvl {user.level}</span>
+                                                    </div>
+                                                </div>
+                                                <span class="text-sm font-black text-indigo-600 shrink-0">{user.total_score} pts</span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+
+                    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur-md border-t border-slate-800 py-3 px-6 flex justify-between z-[600]">
+                        {[
+                            { id: "quest", icon: "map", label: "Карта" },
+                            { id: "profile", icon: "user", label: "Профиль" },
+                            { id: "inventory", icon: "briefcase", label: "Рюкзак" },
+                            { id: "shop", icon: "shopping-cart", label: "Магазин" },
+                            { id: "rating", icon: "trophy", label: "Рейтинг" }
+                        ].map((tab) => (
+                            <button 
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                class={`flex flex-col items-center gap-1.5 bg-transparent border-none outline-none cursor-pointer transition-all duration-300 ${
+                                    activeTab === tab.id ? "text-indigo-400 scale-110 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" : "text-slate-500 hover:text-slate-300"
+                                }`}
+                            >
+                                <i data-lucide={tab.icon} class="w-5 h-5"></i>
+                                <span class="text-[9px] font-extrabold uppercase tracking-widest">{tab.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
+    <script>
+        (function () {
+            const source = document.getElementById("app-source").textContent;
+            const { code } = Babel.transform(source, { presets: ["react"] });
+            const script = document.createElement("script");
+            script.text = code;
+            document.body.appendChild(script);
+        })();
+    </script>
+</body>
+</html>
